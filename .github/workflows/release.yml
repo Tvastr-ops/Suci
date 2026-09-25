@@ -72,8 +72,8 @@ jobs:
       - name: Build Universal APK
         run: flutter build apk --release
 
-      - name: Build Modern 64-bit ARM (arm64-v8a) APK
-        run: flutter build apk --release --target-platform android-arm64
+      - name: Build Split-per-ABI APKs
+        run: flutter build apk --release --split-per-abi
 
       - name: Prepare Release Artifacts
         run: |
@@ -83,8 +83,7 @@ jobs:
           # Copy and label universal APK
           cp build/app/outputs/flutter-apk/app-release.apk "dist/suci-${VERSION}-universal.apk"
 
-          # Build split-per-abi to isolate arm64-v8a
-          flutter build apk --release --split-per-abi
+          # Copy arm64-v8a APK
           cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "dist/suci-${VERSION}-arm64-v8a.apk"
 
           # Generate SHA-256 checksums
