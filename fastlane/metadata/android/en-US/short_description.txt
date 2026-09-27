@@ -1,0 +1,1 @@
+Minimalist, local-first literature and web serial tracker.

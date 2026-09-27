@@ -1,0 +1,9 @@
+Suci is a minimalist, local-first literature and web serial tracker.
+
+Key Features:
+• Complete Privacy & Local-First: All reading data, tags, and progress logs stay on your device with offline SQLite storage.
+• Multi-Format Support: Web novels, light novels, published fiction, serials, manga, and audiobooks.
+• Granular Progress Tracking: Chapters, volumes, word counts, and percentage tracking with instant 1-tap increments.
+• Adaptive Material 3 Design: Dynamic Color theming, 7 expressive palettes, and responsive layouts for phones, foldables, and tablets.
+• Local Security Gate: Dedicated custom in-app PIN and biometric authentication with brute-force protection.
+• Unrestricted Data Portability: Instant export and restore via JSON, CSV spreadsheets, and complete ZIP archives including covers.
