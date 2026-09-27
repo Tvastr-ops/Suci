@@ -84,80 +84,44 @@ class SettingsScreen extends ConsumerWidget {
                   },
                 ),
                 const Divider(height: 1),
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.color_lens_outlined,
-                              size: 24, color: colorScheme.onSurfaceVariant),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Theme Palette',
-                                    style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500)),
-                                const SizedBox(height: 2),
-                                Text(
-                                  settings.dynamicColor
-                                      ? 'Used when dynamic color is disabled or unavailable'
-                                      : AppPalettes.fromId(settings.customPalette).label,
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: colorScheme.onSurfaceVariant),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
+                ListTile(
+                  leading: const Icon(Icons.color_lens_outlined),
+                  title: const Text('Theme Palette'),
+                  subtitle: Text(
+                    settings.dynamicColor
+                        ? 'Used when dynamic color is disabled'
+                        : AppPalettes.fromId(settings.customPalette).label,
+                  ),
+                  trailing: DropdownButton<String>(
+                    value: AppPalettes.all.any((p) => p.id == settings.customPalette)
+                        ? settings.customPalette
+                        : AppPalettes.all.first.id,
+                    underline: const SizedBox(),
+                    items: AppPalettes.all.map((p) {
+                      return DropdownMenuItem(
+                        value: p.id,
                         child: Row(
-                          children: AppPalettes.all.map((p) {
-                            final isSelected = settings.customPalette == p.id;
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 12),
-                              child: Tooltip(
-                                message: p.label,
-                                child: InkWell(
-                                  onTap: () =>
-                                      settingsNotifier.setCustomPalette(p.id),
-                                  borderRadius: BorderRadius.circular(24),
-                                  child: Container(
-                                    width: 42,
-                                    height: 42,
-                                    decoration: BoxDecoration(
-                                      color: p.primary,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: isSelected
-                                            ? (theme.brightness == Brightness.dark
-                                                ? Colors.white
-                                                : Colors.black87)
-                                            : Colors.transparent,
-                                        width: isSelected ? 2.5 : 0,
-                                      ),
-                                    ),
-                                    child: isSelected
-                                        ? const Icon(Icons.check,
-                                            color: Colors.white, size: 20)
-                                        : null,
-                                  ),
-                                ),
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 14,
+                              height: 14,
+                              decoration: BoxDecoration(
+                                color: p.primary,
+                                shape: BoxShape.circle,
                               ),
-                            );
-                          }).toList(),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(p.label),
+                          ],
                         ),
-                      ),
-                    ],
+                      );
+                    }).toList(),
+                    onChanged: (id) {
+                      if (id != null) {
+                        settingsNotifier.setCustomPalette(id);
+                      }
+                    },
                   ),
                 ),
                 const Divider(height: 1),
@@ -239,6 +203,7 @@ class SettingsScreen extends ConsumerWidget {
                       underline: const SizedBox(),
                       items: const [
                         DropdownMenuItem(value: 0, child: Text('Immediately')),
+                        DropdownMenuItem(value: 30, child: Text('30 seconds')),
                         DropdownMenuItem(value: 60, child: Text('1 minute')),
                         DropdownMenuItem(value: 300, child: Text('5 minutes')),
                         DropdownMenuItem(value: 900, child: Text('15 minutes')),
@@ -314,7 +279,7 @@ class SettingsScreen extends ConsumerWidget {
             child: Column(
               children: [
                 Text(
-                  'Suci v1.0.3',
+                  'Suci v1.0.4',
                   style: theme.textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: colorScheme.onSurfaceVariant,
@@ -404,6 +369,8 @@ class SettingsScreen extends ConsumerWidget {
     switch (seconds) {
       case 0:
         return 'Immediately upon leaving';
+      case 30:
+        return 'After 30 seconds in background';
       case 60:
         return 'After 1 minute in background';
       case 300:

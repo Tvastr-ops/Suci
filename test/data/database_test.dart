@@ -128,4 +128,50 @@ void main() {
     expect(await workRepo.getWorkWithTags(workId), isNull);
     expect((await logRepo.getLogsForWork(workId)).isEmpty, isTrue);
   });
+
+  test('updateWork allows editing and clearing startedAt and completedAt dates', () async {
+    final customStart = DateTime(2023, 5, 10);
+    final customEnd = DateTime(2023, 8, 20);
+
+    final workId = await workRepo.createWork(
+      title: 'Backdated Novel',
+      status: ReadingStatus.reading.value,
+      startedAt: customStart,
+    );
+
+    var data = await workRepo.getWorkWithTags(workId);
+    expect(data!.work.startedAt, customStart);
+    expect(data.work.completedAt, isNull);
+
+    // Update with a completion date
+    await workRepo.updateWork(
+      id: workId,
+      title: 'Backdated Novel',
+      format: data.work.format,
+      status: ReadingStatus.completed.value,
+      publicationStatus: data.work.publicationStatus,
+      progressUnit: data.work.progressUnit,
+      currentProgress: data.work.currentProgress,
+      completedAt: customEnd,
+    );
+
+    data = await workRepo.getWorkWithTags(workId);
+    expect(data!.work.startedAt, customStart);
+    expect(data.work.completedAt, customEnd);
+
+    // Explicitly clear completedAt
+    await workRepo.updateWork(
+      id: workId,
+      title: 'Backdated Novel',
+      format: data.work.format,
+      status: ReadingStatus.reading.value,
+      publicationStatus: data.work.publicationStatus,
+      progressUnit: data.work.progressUnit,
+      currentProgress: data.work.currentProgress,
+      clearCompletedAt: true,
+    );
+
+    data = await workRepo.getWorkWithTags(workId);
+    expect(data!.work.completedAt, isNull);
+  });
 }

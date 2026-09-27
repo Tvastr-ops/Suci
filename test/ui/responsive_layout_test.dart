@@ -160,7 +160,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Scroll down settings to find "Export Library" unified tile
-    await tester.drag(find.byType(ListView).last, const Offset(0, -400));
+    await tester.scrollUntilVisible(find.text('Export Library'), 200);
     await tester.pumpAndSettle();
     expect(find.text('Export Library'), findsOneWidget);
     await tester.tap(find.text('Export Library'));

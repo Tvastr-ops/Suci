@@ -53,26 +53,44 @@ class _AppLockGateState extends ConsumerState<AppLockGate>
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    final isShieldVisible =
+        authState.isLockEnabled && _isBackgrounded && !authState.isLocked;
+    final isLockVisible = authState.isLockEnabled && authState.isLocked;
 
-    // If app lock is enabled and state is locked, present LockScreen
-    if (authState.isLockEnabled && authState.isLocked) {
-      return const LockScreen();
-    }
-
-    // When backgrounded or switching apps, show privacy shield if lock is enabled
-    if (authState.isLockEnabled && _isBackgrounded) {
-      final colorScheme = Theme.of(context).colorScheme;
-      return Container(
-        color: colorScheme.surface,
-        alignment: Alignment.center,
-        child: Icon(
-          Icons.shield_outlined,
-          size: 64,
-          color: colorScheme.primary.withValues(alpha: 0.5),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // The main app tree stays alive and never unmounts, preserving all input fields
+        FocusScope(
+          canRequestFocus: !isLockVisible && !isShieldVisible,
+          child: IgnorePointer(
+            ignoring: isLockVisible || isShieldVisible,
+            child: ExcludeSemantics(
+              excluding: isLockVisible || isShieldVisible,
+              child: widget.child,
+            ),
+          ),
         ),
-      );
-    }
 
-    return widget.child;
+        // Privacy shield when in background (Android Recents / task switcher)
+        if (isShieldVisible)
+          Container(
+            color: Theme.of(context).colorScheme.surface,
+            alignment: Alignment.center,
+            child: Icon(
+              Icons.shield_outlined,
+              size: 64,
+              color:
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+            ),
+          ),
+
+        // Lock screen overlay when app is locked
+        if (isLockVisible)
+          const Positioned.fill(
+            child: LockScreen(),
+          ),
+      ],
+    );
   }
 }

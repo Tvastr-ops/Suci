@@ -278,7 +278,9 @@ class WorkRepository {
     String? synopsis,
     List<String>? tags,
     DateTime? startedAt,
+    bool clearStartedAt = false,
     DateTime? completedAt,
+    bool clearCompletedAt = false,
   }) async {
     final existing = await (_db.select(_db.works)
           ..where((w) => w.id.equals(id)))
@@ -288,13 +290,20 @@ class WorkRepository {
 
     final now = DateTime.now();
 
-    DateTime? effectiveStartedAt = startedAt ?? existing.startedAt;
-    if (effectiveStartedAt == null && status == ReadingStatus.reading.value) {
+    DateTime? effectiveStartedAt = clearStartedAt
+        ? null
+        : (startedAt ?? existing.startedAt);
+    if (!clearStartedAt &&
+        effectiveStartedAt == null &&
+        status == ReadingStatus.reading.value) {
       effectiveStartedAt = now;
     }
 
-    DateTime? effectiveCompletedAt = completedAt ?? existing.completedAt;
-    if (effectiveCompletedAt == null &&
+    DateTime? effectiveCompletedAt = clearCompletedAt
+        ? null
+        : (completedAt ?? existing.completedAt);
+    if (!clearCompletedAt &&
+        effectiveCompletedAt == null &&
         status == ReadingStatus.completed.value) {
       effectiveCompletedAt = now;
     }

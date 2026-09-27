@@ -1,8 +1,11 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+
 import '../../domain/enums/progress_unit.dart';
 import '../../domain/enums/publication_status.dart';
 import '../../domain/enums/reading_status.dart';
@@ -41,6 +44,8 @@ class _AddEditWorkScreenState extends ConsumerState<AddEditWorkScreen> {
   ProgressUnit _progressUnit = ProgressUnit.chapter;
 
   int? _rating;
+  DateTime? _startedDate;
+  DateTime? _completedDate;
   List<String> _tags = [];
   List<String> _additionalUrls = [];
   bool _isMoreExpanded = false;
@@ -87,6 +92,8 @@ class _AddEditWorkScreenState extends ConsumerState<AddEditWorkScreen> {
         _format = WorkFormat.fromValue(w.format);
         _progressUnit = ProgressUnit.fromValue(w.progressUnit);
         _rating = w.rating;
+        _startedDate = w.startedAt;
+        _completedDate = w.completedAt;
         _tags = workData.tags.map((t) => t.name).toList();
 
         try {
@@ -99,9 +106,9 @@ class _AddEditWorkScreenState extends ConsumerState<AddEditWorkScreen> {
         _isMoreExpanded = true; // Expand when editing existing work
       }
     } else {
-      final defaultUnit =
-          ref.read(settingsProvider).defaultProgressUnit;
+      final defaultUnit = ref.read(settingsProvider).defaultProgressUnit;
       _progressUnit = defaultUnit;
+      _startedDate = DateTime.now();
     }
 
     setState(() {
@@ -186,12 +193,9 @@ class _AddEditWorkScreenState extends ConsumerState<AddEditWorkScreen> {
 
     final currentProgress =
         int.tryParse(_currentProgressController.text.trim()) ?? 0;
-    final totalProgress =
-        int.tryParse(_totalProgressController.text.trim());
-    final currentVolume =
-        int.tryParse(_currentVolumeController.text.trim());
-    final totalVolumes =
-        int.tryParse(_totalVolumesController.text.trim());
+    final totalProgress = int.tryParse(_totalProgressController.text.trim());
+    final currentVolume = int.tryParse(_currentVolumeController.text.trim());
+    final totalVolumes = int.tryParse(_totalVolumesController.text.trim());
 
     final repo = ref.read(workRepositoryProvider);
 
@@ -214,6 +218,8 @@ class _AddEditWorkScreenState extends ConsumerState<AddEditWorkScreen> {
         synopsis: synopsis,
         notes: notes,
         tags: _tags,
+        startedAt: _startedDate,
+        completedAt: _completedDate,
       );
     } else {
       await repo.updateWork(
@@ -235,6 +241,10 @@ class _AddEditWorkScreenState extends ConsumerState<AddEditWorkScreen> {
         synopsis: synopsis,
         notes: notes,
         tags: _tags,
+        startedAt: _startedDate,
+        clearStartedAt: _startedDate == null,
+        completedAt: _completedDate,
+        clearCompletedAt: _completedDate == null,
       );
     }
 
@@ -246,9 +256,7 @@ class _AddEditWorkScreenState extends ConsumerState<AddEditWorkScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final theme = Theme.of(context);
@@ -273,301 +281,338 @@ class _AddEditWorkScreenState extends ConsumerState<AddEditWorkScreen> {
             key: _formKey,
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          children: [
-            // Core Field: Title
-            TextFormField(
-              controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: 'Title *',
-                hintText: 'e.g. Super Supportive, Worm, Mother of Learning',
-              ),
-              validator: (val) {
-                if (val == null || val.trim().isEmpty) {
-                  return 'Title is required';
-                }
-                if (val.trim().length > 500) {
-                  return 'Title must be 500 characters or less';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Core Field: Status
-            Text(
-              'Shelf / Status',
-              style: theme.textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 8),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SegmentedButton<ReadingStatus>(
-                segments: ReadingStatus.values.map((s) {
-                  return ButtonSegment(
-                    value: s,
-                    label: Text(s.label),
-                  );
-                }).toList(),
-                selected: {_status},
-                onSelectionChanged: (set) {
-                  setState(() {
-                    _status = set.first;
-                  });
-                },
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Core Field: Progress Unit
-            Text(
-              'Track Progress By',
-              style: theme.textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: ProgressUnit.values.map((u) {
-                final isSelected = _progressUnit == u;
-                return ChoiceChip(
-                  label: Text(u.label),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    if (selected) {
-                      setState(() {
-                        _progressUnit = u;
-                      });
+              children: [
+                // Core Field: Title
+                TextFormField(
+                  controller: _titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Title *',
+                    hintText: 'e.g. Super Supportive, Worm, Mother of Learning',
+                  ),
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return 'Title is required';
                     }
+                    if (val.trim().length > 500) {
+                      return 'Title must be 500 characters or less';
+                    }
+                    return null;
                   },
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 16),
-
-            // Core Field: Progress inputs with stepper
-            _buildProgressInputs(context),
-            const SizedBox(height: 24),
-
-            // Expandable section header
-            InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () {
-                setState(() {
-                  _isMoreExpanded = !_isMoreExpanded;
-                });
-              },
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      _isMoreExpanded
-                          ? 'Hide Additional Details'
-                          : 'Add Details (Author, URL, Tags, Rating, Notes...)',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Icon(
-                      _isMoreExpanded
-                          ? Icons.expand_less_rounded
-                          : Icons.expand_more_rounded,
-                      color: colorScheme.primary,
-                    ),
-                  ],
+                const SizedBox(height: 16),
+
+                // Core Field: Status
+                Text(
+                  'Shelf / Status',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
-              ),
-            ),
-
-            if (_isMoreExpanded) ...[
-              const SizedBox(height: 20),
-
-              // Author
-              TextFormField(
-                controller: _authorController,
-                decoration: const InputDecoration(
-                  labelText: 'Author / Creator',
-                  hintText: 'e.g. Sleyca, Wildbow, Zorian',
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Primary Source URL
-              TextFormField(
-                controller: _sourceUrlController,
-                decoration: const InputDecoration(
-                  labelText: 'Source URL',
-                  hintText: 'https://royalroad.com/fiction/...',
-                  prefixIcon: Icon(Icons.link_rounded),
-                ),
-                onChanged: _detectDomainAndSuggest,
-                validator: (val) {
-                  if (val != null && val.trim().isNotEmpty) {
-                    final uri = Uri.tryParse(val.trim());
-                    if (uri == null ||
-                        (!uri.isScheme('http') && !uri.isScheme('https'))) {
-                      return 'Enter a valid URL (starting with http:// or https://)';
-                    }
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Format & Publication Status
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<WorkFormat>(
-                      initialValue: _format,
-                      decoration: const InputDecoration(labelText: 'Format'),
-                      items: WorkFormat.values.map((f) {
-                        return DropdownMenuItem(
-                          value: f,
-                          child: Text(f.label),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => _format = val);
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButtonFormField<PublicationStatus>(
-                      initialValue: _pubStatus,
-                      decoration:
-                          const InputDecoration(labelText: 'Serialization'),
-                      items: PublicationStatus.values.map((p) {
-                        return DropdownMenuItem(
-                          value: p,
-                          child: Text(p.label),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => _pubStatus = val);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Cover Image Path / URL + Gallery Button
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _coverPathController,
-                      decoration: const InputDecoration(
-                        labelText: 'Cover (URL or File)',
-                        hintText: 'Paste web image URL or select file',
-                        prefixIcon: Icon(Icons.image_outlined),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.filledTonal(
-                    icon: const Icon(Icons.photo_library_outlined),
-                    tooltip: 'Pick from Gallery',
-                    onPressed: _pickCoverImage,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Star Rating
-              Row(
-                children: [
-                  Text(
-                    'Rating:',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  StarRatingWidget(
-                    rating: _rating,
-                    size: 28,
-                    showNumber: true,
-                    onRatingChanged: (val) {
+                const SizedBox(height: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SegmentedButton<ReadingStatus>(
+                    segments: ReadingStatus.values.map((s) {
+                      return ButtonSegment(value: s, label: Text(s.label));
+                    }).toList(),
+                    selected: {_status},
+                    onSelectionChanged: (set) {
                       setState(() {
-                        _rating = val;
+                        _status = set.first;
+                        if (_status == ReadingStatus.reading &&
+                            _startedDate == null) {
+                          _startedDate = DateTime.now();
+                        }
+                        if (_status == ReadingStatus.completed &&
+                            _completedDate == null) {
+                          _completedDate = DateTime.now();
+                        }
                       });
                     },
                   ),
+                ),
+                const SizedBox(height: 16),
+
+                // Reading Dates (Started & Completed)
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildDatePickerTile(
+                        context: context,
+                        label: 'Started Date',
+                        date: _startedDate,
+                        onDateChanged: (val) =>
+                            setState(() => _startedDate = val),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildDatePickerTile(
+                        context: context,
+                        label: 'Finished Date',
+                        date: _completedDate,
+                        onDateChanged: (val) =>
+                            setState(() => _completedDate = val),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Core Field: Progress Unit
+                Text(
+                  'Track Progress By',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: ProgressUnit.values.map((u) {
+                    final isSelected = _progressUnit == u;
+                    return ChoiceChip(
+                      label: Text(u.label),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        if (selected) {
+                          setState(() {
+                            _progressUnit = u;
+                          });
+                        }
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+
+                // Core Field: Progress inputs with stepper
+                _buildProgressInputs(context),
+                const SizedBox(height: 24),
+
+                // Expandable section header
+                InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () {
+                    setState(() {
+                      _isMoreExpanded = !_isMoreExpanded;
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withValues(
+                        alpha: 0.4,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Add More Details',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Icon(
+                          _isMoreExpanded
+                              ? Icons.expand_less_rounded
+                              : Icons.expand_more_rounded,
+                          color: colorScheme.primary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                if (_isMoreExpanded) ...[
+                  const SizedBox(height: 20),
+
+                  // Author
+                  TextFormField(
+                    controller: _authorController,
+                    decoration: const InputDecoration(
+                      labelText: 'Author / Creator',
+                      hintText: 'e.g. Sleyca, Wildbow, Zorian',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Primary Source URL
+                  TextFormField(
+                    controller: _sourceUrlController,
+                    decoration: const InputDecoration(
+                      labelText: 'Source URL',
+                      hintText: 'https://royalroad.com/fiction/...',
+                      prefixIcon: Icon(Icons.link_rounded),
+                    ),
+                    onChanged: _detectDomainAndSuggest,
+                    validator: (val) {
+                      if (val != null && val.trim().isNotEmpty) {
+                        final uri = Uri.tryParse(val.trim());
+                        if (uri == null ||
+                            (!uri.isScheme('http') && !uri.isScheme('https'))) {
+                          return 'Enter a valid URL (starting with http:// or https://)';
+                        }
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Format & Publication Status
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<WorkFormat>(
+                          initialValue: _format,
+                          decoration: const InputDecoration(
+                            labelText: 'Format',
+                          ),
+                          items: WorkFormat.values.map((f) {
+                            return DropdownMenuItem(
+                              value: f,
+                              child: Text(f.label),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) setState(() => _format = val);
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButtonFormField<PublicationStatus>(
+                          initialValue: _pubStatus,
+                          decoration: const InputDecoration(
+                            labelText: 'Serialization',
+                          ),
+                          items: PublicationStatus.values.map((p) {
+                            return DropdownMenuItem(
+                              value: p,
+                              child: Text(p.label),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) setState(() => _pubStatus = val);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Cover Image Path / URL + Gallery Button
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _coverPathController,
+                          decoration: const InputDecoration(
+                            labelText: 'Cover (URL or File)',
+                            hintText: 'Paste web image URL or select file',
+                            prefixIcon: Icon(Icons.image_outlined),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton.filledTonal(
+                        icon: const Icon(Icons.photo_library_outlined),
+                        tooltip: 'Pick from Gallery',
+                        onPressed: _pickCoverImage,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Star Rating
+                  Row(
+                    children: [
+                      Text(
+                        'Rating:',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      StarRatingWidget(
+                        rating: _rating,
+                        size: 28,
+                        showNumber: true,
+                        onRatingChanged: (val) {
+                          setState(() {
+                            _rating = val;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Tags
+                  Text(
+                    'Tags / Fandoms',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TagInputField(
+                    initialTags: _tags,
+                    onTagsChanged: (tags) {
+                      _tags = tags;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Synopsis
+                  TextFormField(
+                    controller: _synopsisController,
+                    decoration: const InputDecoration(
+                      labelText: 'Synopsis / Blurb',
+                      hintText: 'Brief summary of the work...',
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Personal Notes
+                  TextFormField(
+                    controller: _notesController,
+                    decoration: const InputDecoration(
+                      labelText: 'Personal Notes & Impressions',
+                      hintText:
+                          'Bookmarked arcs, review thoughts, reminders...',
+                    ),
+                    maxLines: 4,
+                  ),
+                  const SizedBox(height: 24),
                 ],
-              ),
-              const SizedBox(height: 20),
 
-              // Tags
-              Text(
-                'Tags / Fandoms',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.onSurfaceVariant,
+                // Save Button
+                FilledButton.icon(
+                  onPressed: _saveWork,
+                  icon: const Icon(Icons.save_rounded),
+                  label: Text(isEditing ? 'Update Work' : 'Add to Library'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              TagInputField(
-                initialTags: _tags,
-                onTagsChanged: (tags) {
-                  _tags = tags;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Synopsis
-              TextFormField(
-                controller: _synopsisController,
-                decoration: const InputDecoration(
-                  labelText: 'Synopsis / Blurb',
-                  hintText: 'Brief summary of the work...',
-                ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 16),
-
-              // Personal Notes
-              TextFormField(
-                controller: _notesController,
-                decoration: const InputDecoration(
-                  labelText: 'Personal Notes & Impressions',
-                  hintText: 'Bookmarked arcs, review thoughts, reminders...',
-                ),
-                maxLines: 4,
-              ),
-              const SizedBox(height: 24),
-            ],
-
-            // Save Button
-            FilledButton.icon(
-              onPressed: _saveWork,
-              icon: const Icon(Icons.save_rounded),
-              label: Text(isEditing ? 'Update Work' : 'Add to Library'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
+                const SizedBox(height: 32),
+              ],
             ),
-            const SizedBox(height: 32),
-          ],
+          ),
         ),
       ),
-    ),
-  ),
-);
+    );
   }
 
   Widget _buildProgressInputs(BuildContext context) {
@@ -726,6 +771,90 @@ class _AddEditWorkScreenState extends ConsumerState<AddEditWorkScreen> {
         }
         return null;
       },
+    );
+  }
+
+  Widget _buildDatePickerTile({
+    required BuildContext context,
+    required String label,
+    required DateTime? date,
+    required ValueChanged<DateTime?> onDateChanged,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final dateFormat = DateFormat('MMM d, y');
+
+    return OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        side: BorderSide(
+          color: date != null
+              ? colorScheme.primary
+              : colorScheme.outlineVariant,
+        ),
+      ),
+      onPressed: () async {
+        final now = DateTime.now();
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: date ?? now,
+          firstDate: DateTime(1970),
+          lastDate: DateTime(now.year + 5),
+        );
+        if (picked != null) {
+          onDateChanged(picked);
+        }
+      },
+      child: Row(
+        children: [
+          Icon(
+            Icons.calendar_today_rounded,
+            size: 16,
+            color: date != null
+                ? colorScheme.primary
+                : colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                Text(
+                  date != null ? dateFormat.format(date) : 'Not set',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontWeight: date != null
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                    color: date != null
+                        ? colorScheme.onSurface
+                        : colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (date != null)
+            GestureDetector(
+              onTap: () => onDateChanged(null),
+              child: Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Icon(
+                  Icons.close_rounded,
+                  size: 16,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

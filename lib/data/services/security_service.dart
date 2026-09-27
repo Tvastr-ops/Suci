@@ -46,7 +46,7 @@ class SecurityService {
 
   Future<int> getLockTimeoutSeconds() async {
     final val = await _storage.read(key: _keyLockTimeout);
-    return val != null ? int.tryParse(val) ?? 0 : 0;
+    return val != null ? int.tryParse(val) ?? 30 : 30;
   }
 
   Future<void> setLockTimeoutSeconds(int seconds) async {
@@ -156,7 +156,7 @@ class SecurityService {
       if (!canCheck && !isSupported) return false;
 
       final available = await _localAuth.getAvailableBiometrics();
-      return available.isNotEmpty;
+      return canCheck || available.isNotEmpty;
     } on PlatformException {
       return false;
     } catch (_) {

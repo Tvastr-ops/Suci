@@ -54,6 +54,7 @@ class AuthState {
 
 class AuthNotifier extends Notifier<AuthState> {
   DateTime? _pausedAt;
+  bool _isAuthenticatingBiometrics = false;
   late SecurityService _security;
 
   @override
@@ -85,10 +86,12 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   void onAppPaused() {
+    if (_isAuthenticatingBiometrics) return;
     _pausedAt = DateTime.now();
   }
 
   Future<void> onAppResumed() async {
+    if (_isAuthenticatingBiometrics) return;
     if (!state.isLockEnabled || state.isLocked) return;
 
     final pausedAt = _pausedAt;
@@ -102,12 +105,14 @@ class AuthNotifier extends Notifier<AuthState> {
         remainingLockoutSeconds: remaining,
       );
     }
+    _pausedAt = null;
   }
 
   Future<bool> unlockWithPin(String pin) async {
     final success = await _security.verifyPin(pin);
     final remaining = await _security.getRemainingLockoutSeconds();
     if (success) {
+      _pausedAt = null;
       state = state.copyWith(
         isLocked: false,
         remainingLockoutSeconds: 0,
@@ -126,15 +131,24 @@ class AuthNotifier extends Notifier<AuthState> {
     final remaining = await _security.getRemainingLockoutSeconds();
     if (remaining > 0) return false;
 
-    final authenticated = await _security.authenticateBiometrics();
-    if (authenticated) {
-      state = state.copyWith(
-        isLocked: false,
-        remainingLockoutSeconds: 0,
-      );
-      return true;
+    _isAuthenticatingBiometrics = true;
+    try {
+      final authenticated = await _security.authenticateBiometrics();
+      if (authenticated) {
+        _pausedAt = null;
+        state = state.copyWith(
+          isLocked: false,
+          remainingLockoutSeconds: 0,
+        );
+        return true;
+      }
+      return false;
+    } finally {
+      Future.delayed(const Duration(milliseconds: 600), () {
+        _isAuthenticatingBiometrics = false;
+        _pausedAt = null;
+      });
     }
-    return false;
   }
 
   Future<void> setupPin(String pin) async {

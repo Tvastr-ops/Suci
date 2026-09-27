@@ -515,24 +515,44 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        if (startedAt != null)
-          _buildDateItem(theme, 'Started', dateFormat.format(startedAt)),
+        _buildDateItem(
+          theme,
+          'Started',
+          startedAt != null ? dateFormat.format(startedAt) : 'Set start date',
+          onTap: () => _editDate(context, work, isStarted: true),
+        ),
         if (lastReadAt != null)
           _buildDateItem(theme, 'Last Read', dateFormat.format(lastReadAt)),
-        if (completedAt != null)
-          _buildDateItem(theme, 'Completed', dateFormat.format(completedAt)),
+        _buildDateItem(
+          theme,
+          'Completed',
+          completedAt != null ? dateFormat.format(completedAt) : 'Set completed',
+          onTap: () => _editDate(context, work, isStarted: false),
+        ),
       ],
     );
   }
 
-  Widget _buildDateItem(ThemeData theme, String label, String value) {
-    return Column(
+  Widget _buildDateItem(ThemeData theme, String label, String value,
+      {VoidCallback? onTap}) {
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          label,
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            if (onTap != null) ...[
+              const SizedBox(width: 4),
+              Icon(Icons.edit_outlined,
+                  size: 11, color: theme.colorScheme.primary),
+            ],
+          ],
         ),
         const SizedBox(height: 2),
         Text(
@@ -543,6 +563,58 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
         ),
       ],
     );
+
+    if (onTap != null) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: content,
+        ),
+      );
+    }
+
+    return content;
+  }
+
+  Future<void> _editDate(BuildContext context, dynamic work,
+      {required bool isStarted}) async {
+    final currentDate = isStarted
+        ? (work.startedAt as DateTime?)
+        : (work.completedAt as DateTime?);
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: currentDate ?? now,
+      firstDate: DateTime(1970),
+      lastDate: DateTime(now.year + 5),
+      helpText: isStarted ? 'SELECT STARTED DATE' : 'SELECT COMPLETED DATE',
+    );
+
+    if (picked != null) {
+      await ref.read(workRepositoryProvider).updateWork(
+            id: work.id,
+            title: work.title,
+            author: work.author,
+            sourceUrl: work.sourceUrl,
+            additionalUrlsJson: work.additionalUrls,
+            format: work.format,
+            status: work.status,
+            publicationStatus: work.publicationStatus,
+            coverPath: work.coverPath,
+            progressUnit: work.progressUnit,
+            currentProgress: work.currentProgress,
+            totalProgress: work.totalProgress,
+            currentVolume: work.currentVolume,
+            totalVolumes: work.totalVolumes,
+            rating: work.rating,
+            notes: work.notes,
+            synopsis: work.synopsis,
+            startedAt: isStarted ? picked : work.startedAt,
+            completedAt: !isStarted ? picked : work.completedAt,
+          );
+    }
   }
 
   Future<void> _openUrl(BuildContext context, String url) async {
