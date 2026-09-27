@@ -252,6 +252,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   void _openFilterSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (ctx) => const FilterBottomSheet(),

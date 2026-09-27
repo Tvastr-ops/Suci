@@ -306,6 +306,7 @@ class SettingsScreen extends ConsumerWidget {
   void _showExportSheet(BuildContext context, BackupService backupService) {
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       showDragHandle: true,
       builder: (ctx) {
         return SafeArea(

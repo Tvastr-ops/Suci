@@ -64,6 +64,20 @@ class ScaffoldWithNavBar extends StatelessWidget {
   const ScaffoldWithNavBar({super.key, required this.child});
 
   void _onDestinationSelected(BuildContext context, int index) {
+    final location = GoRouterState.of(context).uri.toString();
+    final currentIndex = location.startsWith('/settings') ? 1 : 0;
+    if (currentIndex == index) return;
+
+    // Dismiss any open modal bottom sheets, menus, or dialogs before navigating
+    final shellNav = _shellNavigatorKey.currentState;
+    while (shellNav != null && shellNav.canPop()) {
+      shellNav.pop();
+    }
+    final rootNav = _rootNavigatorKey.currentState;
+    while (rootNav != null && rootNav.canPop()) {
+      rootNav.pop();
+    }
+
     if (index == 0) {
       context.go('/library');
     } else {

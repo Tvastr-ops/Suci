@@ -274,6 +274,7 @@ class WorkCard extends ConsumerWidget {
     final work = item.work;
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       showDragHandle: true,
       builder: (ctx) {
         return SafeArea(
@@ -318,6 +319,7 @@ class WorkCard extends ConsumerWidget {
     final work = item.work;
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       showDragHandle: true,
       builder: (ctx) {
         return SafeArea(
@@ -412,6 +414,7 @@ class WorkCard extends ConsumerWidget {
 
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       showDragHandle: true,
       isScrollControlled: true,
       builder: (ctx) {
