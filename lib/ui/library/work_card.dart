@@ -140,7 +140,7 @@ class WorkCard extends ConsumerWidget {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 1-tap +1 increment button
+                  // 1-tap +1 increment button (long-press for custom amount)
                   FilledButton.tonal(
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
@@ -155,6 +155,7 @@ class WorkCard extends ConsumerWidget {
                           .read(workRepositoryProvider)
                           .incrementProgress(work.id);
                     },
+                    onLongPress: () => _showQuickIncrementSheet(context, ref),
                     child: const Text(
                       '+1',
                       style: TextStyle(fontWeight: FontWeight.bold),
@@ -383,6 +384,152 @@ class WorkCard extends ConsumerWidget {
               child: const Text('Delete'),
             ),
           ],
+        );
+      },
+    );
+  }
+
+  void _showQuickIncrementSheet(BuildContext context, WidgetRef ref) {
+    final work = item.work;
+    final unit = ProgressUnit.fromValue(work.progressUnit);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final controller = TextEditingController();
+
+    final List<int> increments;
+    switch (unit) {
+      case ProgressUnit.chapter:
+      case ProgressUnit.volumeChapter:
+        increments = [2, 5, 10, 25];
+        break;
+      case ProgressUnit.percent:
+        increments = [5, 10, 25, 50];
+        break;
+      case ProgressUnit.words:
+        increments = [1000, 2500, 5000, 10000];
+        break;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 4,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Quick Progress Update',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${work.title} • Current: ${_formatProgress(work)}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Quick Add',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: increments.map((inc) {
+                  final label = unit == ProgressUnit.words
+                      ? '+${NumberFormat.compact().format(inc)}'
+                      : unit == ProgressUnit.percent
+                          ? '+$inc%'
+                          : '+$inc';
+                  return ActionChip(
+                    label: Text(label,
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    onPressed: () {
+                      ref
+                          .read(workRepositoryProvider)
+                          .incrementProgress(work.id, amount: inc);
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Added $label to "${work.title}"'),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Or Set Directly',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: controller,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: 'Enter new ${unit.label.toLowerCase()}',
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: () {
+                      final val = int.tryParse(controller.text.trim());
+                      if (val != null) {
+                        ref
+                            .read(workRepositoryProvider)
+                            .updateProgressDirect(
+                              workId: work.id,
+                              progressValue: val,
+                            );
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                'Updated "${work.title}" to $val ${unit.label}'),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
+                    child: const Text('Set'),
+                  ),
+                ],
+              ),
+            ],
+          ),
         );
       },
     );

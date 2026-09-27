@@ -174,4 +174,22 @@ void main() {
     data = await workRepo.getWorkWithTags(workId);
     expect(data!.work.completedAt, isNull);
   });
+
+  test('incrementProgress supports custom amount and logs history', () async {
+    final workId = await workRepo.createWork(
+      title: 'Sprint Reading',
+      status: ReadingStatus.reading.value,
+      currentProgress: 10,
+    );
+
+    // Bump by custom amount +5
+    await workRepo.incrementProgress(workId, amount: 5);
+
+    final updated = await workRepo.getWorkWithTags(workId);
+    expect(updated!.work.currentProgress, 15);
+
+    final logs = await logRepo.getLogsForWork(workId);
+    expect(logs.length, 2); // Initial log + increment log
+    expect(logs.any((l) => l.progressValue == 15), isTrue);
+  });
 }

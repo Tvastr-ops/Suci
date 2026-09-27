@@ -360,7 +360,7 @@ class WorkRepository {
     });
   }
 
-  Future<void> incrementProgress(String workId) async {
+  Future<void> incrementProgress(String workId, {int amount = 1}) async {
     final existing = await (_db.select(_db.works)
           ..where((w) => w.id.equals(workId)))
         .getSingleOrNull();
@@ -368,7 +368,7 @@ class WorkRepository {
     if (existing == null) return;
 
     final now = DateTime.now();
-    final newProgress = existing.currentProgress + 1;
+    final newProgress = existing.currentProgress + amount;
 
     // Transition from plan_to_read to reading on increment
     String newStatus = existing.status;
@@ -453,12 +453,31 @@ class WorkRepository {
     if (existing == null) return;
 
     final now = DateTime.now();
+    final clampedProgress = progressValue < 0 ? 0 : progressValue;
+
+    String newStatus = existing.status;
+    DateTime? startedAt = existing.startedAt;
+    if (existing.status == ReadingStatus.planToRead.value && clampedProgress > 0) {
+      newStatus = ReadingStatus.reading.value;
+      startedAt ??= now;
+    }
+
+    DateTime? completedAt = existing.completedAt;
+    if (existing.totalProgress != null &&
+        clampedProgress >= existing.totalProgress! &&
+        newStatus == ReadingStatus.reading.value) {
+      newStatus = ReadingStatus.completed.value;
+      completedAt ??= now;
+    }
 
     await _db.transaction(() async {
       await (_db.update(_db.works)..where((w) => w.id.equals(workId))).write(
         WorksCompanion(
-          currentProgress: Value(progressValue < 0 ? 0 : progressValue),
+          currentProgress: Value(clampedProgress),
           currentVolume: Value(volumeValue ?? existing.currentVolume),
+          status: Value(newStatus),
+          startedAt: Value(startedAt),
+          completedAt: Value(completedAt),
           lastReadAt: Value(now),
           updatedAt: Value(now),
         ),
@@ -467,7 +486,7 @@ class WorkRepository {
       await _progressLogRepo.addLog(
         workId: workId,
         progressUnit: existing.progressUnit,
-        progressValue: progressValue,
+        progressValue: clampedProgress,
         volumeValue: volumeValue ?? existing.currentVolume,
         note: note,
         recordedAt: now,
