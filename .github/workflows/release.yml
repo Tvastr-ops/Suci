@@ -70,28 +70,23 @@ jobs:
         run: flutter test
 
       - name: Build Universal APK
-        run: flutter build apk --release
-
-      - name: Build Split-per-ABI APKs
-        run: flutter build apk --release --split-per-abi
-
-      - name: Prepare Release Artifacts
         run: |
+          flutter build apk --release
           mkdir -p dist
-          VERSION="${{ steps.vars.outputs.tag }}"
+          cp build/app/outputs/flutter-apk/app-release.apk "dist/suci-${{ steps.vars.outputs.tag }}-universal.apk"
 
-          # Copy and label universal APK
-          cp build/app/outputs/flutter-apk/app-release.apk "dist/suci-${VERSION}-universal.apk"
+      - name: Build ARM64 Standalone APK
+        run: |
+          flutter build apk --release --split-per-abi
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "dist/suci-${{ steps.vars.outputs.tag }}-arm64-v8a.apk"
 
-          # Copy arm64-v8a APK
-          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "dist/suci-${VERSION}-arm64-v8a.apk"
-
-          # Generate SHA-256 checksums
+      - name: Generate Checksums
+        run: |
           cd dist
-          sha256sum * > checksums.sha256
-          cd ..
-
-          ls -la dist
+          sha256sum suci-*.apk > checksums.sha256
+          echo "Generated Checksums:"
+          cat checksums.sha256
+          ls -la
 
       - name: Create GitHub Release & Upload Assets
         uses: softprops/action-gh-release@v2
