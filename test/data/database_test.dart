@@ -192,4 +192,38 @@ void main() {
     expect(logs.length, 2); // Initial log + increment log
     expect(logs.any((l) => l.progressValue == 15), isTrue);
   });
+
+  test('ongoing and hiatus works remain in Reading status when reaching totalProgress', () async {
+    // 1. Ongoing series caught up to current release
+    final ongoingId = await workRepo.createWork(
+      title: 'Ongoing Web Novel',
+      status: ReadingStatus.reading.value,
+      publicationStatus: 'ongoing',
+      currentProgress: 49,
+      totalProgress: 50,
+    );
+
+    await workRepo.incrementProgress(ongoingId);
+    final ongoingWork = await workRepo.getWorkWithTags(ongoingId);
+    expect(ongoingWork!.work.currentProgress, 50);
+    // MUST remain 'reading' because series is not completed publishing
+    expect(ongoingWork.work.status, ReadingStatus.reading.value);
+    expect(ongoingWork.work.completedAt, isNull);
+
+    // 2. Completed publication series
+    final completedPubId = await workRepo.createWork(
+      title: 'Finished Light Novel',
+      status: ReadingStatus.reading.value,
+      publicationStatus: 'completed',
+      currentProgress: 9,
+      totalProgress: 10,
+    );
+
+    await workRepo.incrementProgress(completedPubId);
+    final completedWork = await workRepo.getWorkWithTags(completedPubId);
+    expect(completedWork!.work.currentProgress, 10);
+    // Switches to 'completed' because publication is finished
+    expect(completedWork.work.status, ReadingStatus.completed.value);
+    expect(completedWork.work.completedAt, isNotNull);
+  });
 }

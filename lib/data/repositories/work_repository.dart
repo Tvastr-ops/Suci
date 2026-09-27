@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
+import '../../domain/enums/publication_status.dart';
 import '../../domain/enums/reading_status.dart';
 import '../database/app_database.dart';
 import 'progress_log_repository.dart';
@@ -378,9 +379,16 @@ class WorkRepository {
       startedAt ??= now;
     }
 
-    // Auto complete if total progress exists and reached
+    // Auto complete only if the work is finished publishing (completed or cancelled).
+    // If publicationStatus is ongoing or hiatus, reading to the latest release
+    // means the user is caught up, not that the book/manga is finished!
     DateTime? completedAt = existing.completedAt;
-    if (existing.totalProgress != null &&
+    final isFinishedPublishing =
+        existing.publicationStatus == PublicationStatus.completed.value ||
+        existing.publicationStatus == PublicationStatus.cancelled.value;
+
+    if (isFinishedPublishing &&
+        existing.totalProgress != null &&
         newProgress >= existing.totalProgress! &&
         newStatus == ReadingStatus.reading.value) {
       newStatus = ReadingStatus.completed.value;
@@ -463,7 +471,12 @@ class WorkRepository {
     }
 
     DateTime? completedAt = existing.completedAt;
-    if (existing.totalProgress != null &&
+    final isFinishedPublishing =
+        existing.publicationStatus == PublicationStatus.completed.value ||
+        existing.publicationStatus == PublicationStatus.cancelled.value;
+
+    if (isFinishedPublishing &&
+        existing.totalProgress != null &&
         clampedProgress >= existing.totalProgress! &&
         newStatus == ReadingStatus.reading.value) {
       newStatus = ReadingStatus.completed.value;
