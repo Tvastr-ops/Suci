@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart' as mui;
 import 'providers/settings_provider.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
+import 'ui/security/app_lock_gate.dart';
 
 class SuciApp extends ConsumerWidget {
   const SuciApp({super.key});
@@ -60,6 +61,8 @@ class SuciApp extends ConsumerWidget {
           theme: AppTheme.lightTheme(lightScheme, palette.primary),
           darkTheme: AppTheme.darkTheme(darkScheme, palette.primary),
           routerConfig: appRouter,
+          builder: (context, child) =>
+              AppLockGate(child: child ?? const SizedBox.shrink()),
         );
       },
     );

@@ -122,19 +122,48 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   );
                 }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.only(
-                    left: 16,
-                    right: 16,
-                    top: 4,
-                    bottom: 88, // Space for FAB and bottom nav
-                  ),
-                  itemCount: works.length,
-                  itemBuilder: (context, index) {
-                    final item = works[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: WorkCard(item: item),
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isWide = constraints.maxWidth >= 600;
+
+                    if (isWide) {
+                      return GridView.builder(
+                        padding: const EdgeInsets.only(
+                          left: 16,
+                          right: 16,
+                          top: 4,
+                          bottom: 88, // Space for FAB
+                        ),
+                        gridDelegate:
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 520,
+                          mainAxisExtent: 160,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 10,
+                        ),
+                        itemCount: works.length,
+                        itemBuilder: (context, index) {
+                          final item = works[index];
+                          return WorkCard(item: item);
+                        },
+                      );
+                    }
+
+                    return ListView.builder(
+                      padding: const EdgeInsets.only(
+                        left: 16,
+                        right: 16,
+                        top: 4,
+                        bottom: 88, // Space for FAB and bottom nav
+                      ),
+                      itemCount: works.length,
+                      itemBuilder: (context, index) {
+                        final item = works[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: WorkCard(item: item),
+                        );
+                      },
                     );
                   },
                 );

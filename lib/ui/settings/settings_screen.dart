@@ -7,9 +7,11 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../data/services/backup_service.dart';
 import '../../domain/enums/progress_unit.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/database_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../theme/app_theme.dart';
+import '../security/pin_setup_dialog.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -20,6 +22,7 @@ class SettingsScreen extends ConsumerWidget {
     final colorScheme = theme.colorScheme;
     final settings = ref.watch(settingsProvider);
     final settingsNotifier = ref.read(settingsProvider.notifier);
+    final authState = ref.watch(authProvider);
     final backupService = ref.watch(backupServiceProvider);
     final workRepo = ref.watch(workRepositoryProvider);
 
@@ -32,8 +35,11 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 680),
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         children: [
           // Section: Appearance
           _buildSectionHeader(context, 'Appearance'),
@@ -180,6 +186,78 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
 
+          // Section: Security & Privacy
+          _buildSectionHeader(context, 'Security & Privacy'),
+          Card(
+            child: Column(
+              children: [
+                SwitchListTile(
+                  secondary: const Icon(Icons.lock_outline_rounded),
+                  title: const Text('App Lock (Custom PIN)'),
+                  subtitle: Text(authState.isLockEnabled
+                      ? 'Protected with private 4-digit PIN'
+                      : 'Require PIN to open app'),
+                  value: authState.isLockEnabled,
+                  onChanged: (val) async {
+                    if (val) {
+                      await PinSetupDialog.show(context);
+                    } else {
+                      await PinConfirmDisableDialog.show(context);
+                    }
+                  },
+                ),
+                if (authState.isLockEnabled) ...[
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.pin_outlined),
+                    title: const Text('Change PIN'),
+                    subtitle: const Text('Update your 4-digit app PIN'),
+                    onTap: () => PinChangeDialog.show(context),
+                  ),
+                  if (authState.isBiometricAvailable) ...[
+                    const Divider(height: 1),
+                    SwitchListTile(
+                      secondary: const Icon(Icons.fingerprint_rounded),
+                      title: const Text('Biometric Unlock'),
+                      subtitle:
+                          const Text('Use fingerprint or face recognition'),
+                      value: authState.isBiometricEnabled,
+                      onChanged: (val) {
+                        ref
+                            .read(authProvider.notifier)
+                            .setBiometricEnabled(val);
+                      },
+                    ),
+                  ],
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.timer_outlined),
+                    title: const Text('Auto-Lock Timeout'),
+                    subtitle: Text(_formatTimeout(authState.timeoutSeconds)),
+                    trailing: DropdownButton<int>(
+                      value: authState.timeoutSeconds,
+                      underline: const SizedBox(),
+                      items: const [
+                        DropdownMenuItem(value: 0, child: Text('Immediately')),
+                        DropdownMenuItem(value: 60, child: Text('1 minute')),
+                        DropdownMenuItem(value: 300, child: Text('5 minutes')),
+                        DropdownMenuItem(value: 900, child: Text('15 minutes')),
+                      ],
+                      onChanged: (sec) {
+                        if (sec != null) {
+                          ref
+                              .read(authProvider.notifier)
+                              .setTimeoutSeconds(sec);
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
           // Section: Backup & Portability
           _buildSectionHeader(context, 'Backup & Portability (Local-First)'),
           Card(
@@ -187,25 +265,12 @@ class SettingsScreen extends ConsumerWidget {
               children: [
                 ListTile(
                   leading: const Icon(Icons.upload_file_rounded),
-                  title: const Text('Export Library (JSON)'),
+                  title: const Text('Export Library'),
                   subtitle: const Text(
-                      'Save or share structured backup of all works, tags & logs'),
-                  onTap: () => _exportJson(context, backupService),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.table_chart_outlined),
-                  title: const Text('Export to Spreadsheet (CSV)'),
-                  subtitle: const Text(
-                      'Tabular export for Google Sheets or Excel'),
-                  onTap: () => _exportCsv(context, backupService),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.archive_outlined),
-                  title: const Text('Export Full Archive (.ZIP)'),
-                  subtitle: const Text('Includes library data and cover images'),
-                  onTap: () => _exportZip(context, backupService),
+                      'Backup as JSON, full ZIP with covers, or CSV'),
+                  trailing:
+                      const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                  onTap: () => _showExportSheet(context, backupService),
                 ),
                 const Divider(height: 1),
                 ListTile(
@@ -249,7 +314,7 @@ class SettingsScreen extends ConsumerWidget {
             child: Column(
               children: [
                 Text(
-                  'Suci v1.0.0',
+                  'Suci v1.0.3',
                   style: theme.textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: colorScheme.onSurfaceVariant,
@@ -257,7 +322,7 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Offline, local-first literature & web serial tracker',
+                  'Local-first literature & web serial tracker',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                   ),
@@ -268,7 +333,86 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 40),
         ],
       ),
+    ),
+  ),
+);
+  }
+
+  void _showExportSheet(BuildContext context, BackupService backupService) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        return SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Text(
+                    'Export Library',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.data_object_rounded),
+                  title: const Text('JSON Backup'),
+                  subtitle: const Text(
+                      'Recommended • Structured backup for restoring into Suci'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _exportJson(context, backupService);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.archive_outlined),
+                  title: const Text('Full Archive (.ZIP)'),
+                  subtitle: const Text(
+                      'Complete archive including library data and cover images'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _exportZip(context, backupService);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.table_chart_outlined),
+                  title: const Text('Spreadsheet (.CSV)'),
+                  subtitle: const Text(
+                      'Tabular format for viewing in Google Sheets or Excel'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _exportCsv(context, backupService);
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+        ),
+      );
+      },
     );
+  }
+
+  String _formatTimeout(int seconds) {
+    switch (seconds) {
+      case 0:
+        return 'Immediately upon leaving';
+      case 60:
+        return 'After 1 minute in background';
+      case 300:
+        return 'After 5 minutes in background';
+      case 900:
+        return 'After 15 minutes in background';
+      default:
+        return '$seconds seconds';
+    }
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {

@@ -81,18 +81,19 @@ class WorkCard extends ConsumerWidget {
                       ),
                     ],
 
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
 
                     // Format and Publication Status Badges
-                    Row(
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
                       children: [
                         _buildTinyBadge(context, formatLabel),
-                        const SizedBox(width: 6),
                         _buildTinyBadge(context, pubStatusLabel, isMuted: true),
                       ],
                     ),
 
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
 
                     // Progress text & optional progress bar
                     Row(

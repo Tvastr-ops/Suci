@@ -108,8 +108,11 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
               ),
             ],
           ),
-          body: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             children: [
               // Top Header: Cover + Info
               Row(
@@ -469,7 +472,9 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
               const SizedBox(height: 48),
             ],
           ),
-        );
+        ),
+      ),
+    );
       },
     );
   }

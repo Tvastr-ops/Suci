@@ -266,10 +266,13 @@ class _AddEditWorkScreenState extends ConsumerState<AddEditWorkScreen> {
           ),
         ],
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           children: [
             // Core Field: Title
             TextFormField(
@@ -562,7 +565,9 @@ class _AddEditWorkScreenState extends ConsumerState<AddEditWorkScreen> {
           ],
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 
   Widget _buildProgressInputs(BuildContext context) {
