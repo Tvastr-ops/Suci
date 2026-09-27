@@ -1,0 +1,50 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Back Cover Shadow/Base -->
+    <path
+        android:fillColor="#0D2320"
+        android:pathData="M27,42 C27,42 41,38 54,42 C67,38 81,42 81,42 L81,72 C81,72 67,68 54,72 C41,68 27,72 27,72 Z" />
+
+    <!-- Open Book - Left Page Base -->
+    <path
+        android:fillColor="#D8EDE7"
+        android:pathData="M28,40 C41,36 53,40 53,40 L53,69 C53,69 41,65 28,69 Z" />
+
+    <!-- Open Book - Right Page Base -->
+    <path
+        android:fillColor="#B7DDD3"
+        android:pathData="M55,40 C55,40 67,36 80,40 L80,69 C67,65 55,69 55,69 Z" />
+
+    <!-- Left Page Subtle Reading Lines -->
+    <path
+        android:fillColor="#1A3833"
+        android:fillAlpha="0.18"
+        android:pathData="M34,48 C40,46 47,48 47,48 L47,49.5 C47,49.5 40,47.5 34,49.5 Z
+                         M34,53 C40,51 47,53 47,53 L47,54.5 C47,54.5 40,52.5 34,54.5 Z
+                         M34,58 C40,56 47,58 47,58 L47,59.5 C47,59.5 40,57.5 34,59.5 Z" />
+
+    <!-- Right Page Subtle Reading Lines -->
+    <path
+        android:fillColor="#1A3833"
+        android:fillAlpha="0.18"
+        android:pathData="M61,48 C68,46 74,48 74,48 L74,49.5 C68,47.5 61,49.5 61,49.5 Z
+                         M61,53 C68,51 74,53 74,53 L74,54.5 C68,52.5 61,54.5 61,54.5 Z
+                         M61,58 C68,56 74,58 74,58 L74,59.5 C68,57.5 61,59.5 61,59.5 Z" />
+
+    <!-- Central Spine Binding Crease -->
+    <path
+        android:fillColor="#0D2320"
+        android:fillAlpha="0.3"
+        android:pathData="M53.2,39.5 L54.8,39.5 L54.8,70 L53.2,70 Z" />
+
+    <!-- Golden Amber Bookmark Ribbon -->
+    <path
+        android:fillColor="#FFB74D"
+        android:pathData="M51,34 L57,34 L57,56 L54,53 L51,56 Z" />
+    <path
+        android:fillColor="#FFA000"
+        android:pathData="M54,34 L57,34 L57,56 L54,53 Z" />
+</vector>

@@ -49,6 +49,7 @@ class SuciApp extends ConsumerWidget {
     return DynamicColorBuilder(
       builder: (lightDynamic, darkDynamic) {
         final useDynamic = settings.dynamicColor;
+        final palette = AppPalettes.fromId(settings.customPalette);
         final lightScheme = useDynamic ? _toFlutterScheme(lightDynamic) : null;
         final darkScheme = useDynamic ? _toFlutterScheme(darkDynamic) : null;
 
@@ -56,8 +57,8 @@ class SuciApp extends ConsumerWidget {
           title: 'Suci',
           debugShowCheckedModeBanner: false,
           themeMode: settings.themeMode,
-          theme: AppTheme.lightTheme(lightScheme),
-          darkTheme: AppTheme.darkTheme(darkScheme),
+          theme: AppTheme.lightTheme(lightScheme, palette.primary),
+          darkTheme: AppTheme.darkTheme(darkScheme, palette.primary),
           routerConfig: appRouter,
         );
       },

@@ -6,22 +6,26 @@ import '../domain/enums/progress_unit.dart';
 class SettingsState {
   final ThemeMode themeMode;
   final bool dynamicColor;
+  final String customPalette;
   final ProgressUnit defaultProgressUnit;
 
   const SettingsState({
     required this.themeMode,
     required this.dynamicColor,
+    required this.customPalette,
     required this.defaultProgressUnit,
   });
 
   SettingsState copyWith({
     ThemeMode? themeMode,
     bool? dynamicColor,
+    String? customPalette,
     ProgressUnit? defaultProgressUnit,
   }) {
     return SettingsState(
       themeMode: themeMode ?? this.themeMode,
       dynamicColor: dynamicColor ?? this.dynamicColor,
+      customPalette: customPalette ?? this.customPalette,
       defaultProgressUnit: defaultProgressUnit ?? this.defaultProgressUnit,
     );
   }
@@ -36,6 +40,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
     return SettingsState(
       themeMode: _parseThemeMode(prefs?.getString('theme_mode')),
       dynamicColor: prefs?.getBool('dynamic_color') ?? true,
+      customPalette: prefs?.getString('custom_palette') ?? 'teal',
       defaultProgressUnit:
           ProgressUnit.fromValue(prefs?.getString('default_unit') ?? 'chapter'),
     );
@@ -61,6 +66,11 @@ class SettingsNotifier extends Notifier<SettingsState> {
   Future<void> setDynamicColor(bool enabled) async {
     state = state.copyWith(dynamicColor: enabled);
     await _prefs?.setBool('dynamic_color', enabled);
+  }
+
+  Future<void> setCustomPalette(String id) async {
+    state = state.copyWith(customPalette: id);
+    await _prefs?.setString('custom_palette', id);
   }
 
   Future<void> setDefaultProgressUnit(ProgressUnit unit) async {

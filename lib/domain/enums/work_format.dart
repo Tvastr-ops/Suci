@@ -1,7 +1,8 @@
 enum WorkFormat {
   webNovel('Web Novel', 'web_novel'),
+  lightNovel('Light Novel', 'light_novel'),
   fanfiction('Fanfiction', 'fanfiction'),
-  oel('OEL / Light Novel', 'oel'),
+  oel('OEL', 'oel'),
   webSerial('Web Serial', 'web_serial'),
   shortStory('Short Story', 'short_story'),
   novel('Novel', 'novel'),

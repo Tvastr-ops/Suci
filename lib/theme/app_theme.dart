@@ -1,12 +1,82 @@
 import 'package:flutter/material.dart';
 
-class AppTheme {
-  static const Color seedColor = Color(0xFF2C6E63); // Crisp editorial teal/sage
+class AppPalette {
+  final String id;
+  final String label;
+  final Color primary;
 
-  static ThemeData lightTheme([ColorScheme? dynamicScheme]) {
+  const AppPalette({
+    required this.id,
+    required this.label,
+    required this.primary,
+  });
+}
+
+class AppPalettes {
+  static const teal = AppPalette(
+    id: 'teal',
+    label: 'Sage Teal',
+    primary: Color(0xFF2C6E63),
+  );
+
+  static const sakura = AppPalette(
+    id: 'sakura',
+    label: 'Sakura Rose',
+    primary: Color(0xFFB9536B),
+  );
+
+  static const indigo = AppPalette(
+    id: 'indigo',
+    label: 'Midnight Indigo',
+    primary: Color(0xFF3F51B5),
+  );
+
+  static const amber = AppPalette(
+    id: 'amber',
+    label: 'Literary Amber',
+    primary: Color(0xFFC27803),
+  );
+
+  static const violet = AppPalette(
+    id: 'violet',
+    label: 'Amethyst Violet',
+    primary: Color(0xFF6750A4),
+  );
+
+  static const crimson = AppPalette(
+    id: 'crimson',
+    label: 'Crimson Rust',
+    primary: Color(0xFF9C413D),
+  );
+
+  static const slate = AppPalette(
+    id: 'slate',
+    label: 'Obsidian Slate',
+    primary: Color(0xFF455A64),
+  );
+
+  static const List<AppPalette> all = [
+    teal,
+    sakura,
+    indigo,
+    amber,
+    violet,
+    crimson,
+    slate,
+  ];
+
+  static AppPalette fromId(String? id) {
+    return all.firstWhere((p) => p.id == id, orElse: () => teal);
+  }
+}
+
+class AppTheme {
+  static const Color defaultSeedColor = Color(0xFF2C6E63);
+
+  static ThemeData lightTheme([ColorScheme? dynamicScheme, Color? customSeed]) {
     final scheme = dynamicScheme ??
         ColorScheme.fromSeed(
-          seedColor: seedColor,
+          seedColor: customSeed ?? defaultSeedColor,
           brightness: Brightness.light,
         );
 
@@ -72,10 +142,10 @@ class AppTheme {
     );
   }
 
-  static ThemeData darkTheme([ColorScheme? dynamicScheme]) {
+  static ThemeData darkTheme([ColorScheme? dynamicScheme, Color? customSeed]) {
     final scheme = dynamicScheme ??
         ColorScheme.fromSeed(
-          seedColor: seedColor,
+          seedColor: customSeed ?? defaultSeedColor,
           brightness: Brightness.dark,
         );
 

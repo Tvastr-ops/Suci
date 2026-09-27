@@ -9,6 +9,7 @@ import '../../data/services/backup_service.dart';
 import '../../domain/enums/progress_unit.dart';
 import '../../providers/database_provider.dart';
 import '../../providers/settings_provider.dart';
+import '../../theme/app_theme.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -75,6 +76,83 @@ class SettingsScreen extends ConsumerWidget {
                   onChanged: (val) {
                     settingsNotifier.setDynamicColor(val);
                   },
+                ),
+                const Divider(height: 1),
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.color_lens_outlined,
+                              size: 24, color: colorScheme.onSurfaceVariant),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Theme Palette',
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500)),
+                                const SizedBox(height: 2),
+                                Text(
+                                  settings.dynamicColor
+                                      ? 'Used when dynamic color is disabled or unavailable'
+                                      : AppPalettes.fromId(settings.customPalette).label,
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: colorScheme.onSurfaceVariant),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: AppPalettes.all.map((p) {
+                            final isSelected = settings.customPalette == p.id;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: Tooltip(
+                                message: p.label,
+                                child: InkWell(
+                                  onTap: () =>
+                                      settingsNotifier.setCustomPalette(p.id),
+                                  borderRadius: BorderRadius.circular(24),
+                                  child: Container(
+                                    width: 42,
+                                    height: 42,
+                                    decoration: BoxDecoration(
+                                      color: p.primary,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? (theme.brightness == Brightness.dark
+                                                ? Colors.white
+                                                : Colors.black87)
+                                            : Colors.transparent,
+                                        width: isSelected ? 2.5 : 0,
+                                      ),
+                                    ),
+                                    child: isSelected
+                                        ? const Icon(Icons.check,
+                                            color: Colors.white, size: 20)
+                                        : null,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const Divider(height: 1),
                 ListTile(
