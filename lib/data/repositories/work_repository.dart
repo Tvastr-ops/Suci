@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
+import '../../domain/enums/progress_unit.dart';
 import '../../domain/enums/publication_status.dart';
 import '../../domain/enums/reading_status.dart';
 import '../database/app_database.dart';
@@ -309,8 +310,9 @@ class WorkRepository {
       effectiveCompletedAt = now;
     }
 
+    final bool isVolumeUnit = progressUnit == ProgressUnit.volumeChapter.value;
     final bool progressChanged = existing.currentProgress != currentProgress ||
-        existing.currentVolume != currentVolume;
+        (isVolumeUnit && existing.currentVolume != currentVolume);
 
     DateTime? effectiveLastReadAt = existing.lastReadAt;
     if (progressChanged) {
@@ -505,6 +507,35 @@ class WorkRepository {
         recordedAt: now,
       );
     });
+  }
+
+  Future<void> updateTotalProgress({
+    required String workId,
+    required int? totalProgress,
+    int? totalVolumes,
+  }) async {
+    final now = DateTime.now();
+    await (_db.update(_db.works)..where((w) => w.id.equals(workId))).write(
+      WorksCompanion(
+        totalProgress: Value(totalProgress),
+        totalVolumes:
+            totalVolumes != null ? Value(totalVolumes) : const Value.absent(),
+        updatedAt: Value(now),
+      ),
+    );
+  }
+
+  Future<void> updateTotalVolumes({
+    required String workId,
+    required int? totalVolumes,
+  }) async {
+    final now = DateTime.now();
+    await (_db.update(_db.works)..where((w) => w.id.equals(workId))).write(
+      WorksCompanion(
+        totalVolumes: Value(totalVolumes),
+        updatedAt: Value(now),
+      ),
+    );
   }
 
   Future<void> deleteWork(String id) async {

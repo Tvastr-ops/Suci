@@ -12,6 +12,8 @@ class ProgressStepperWidget extends StatelessWidget {
   final VoidCallback onDecrement;
   final ValueChanged<int> onDirectProgressSet;
   final ValueChanged<int?>? onDirectVolumeSet;
+  final ValueChanged<int?>? onDirectTotalSet;
+  final ValueChanged<int?>? onDirectTotalVolumesSet;
 
   const ProgressStepperWidget({
     super.key,
@@ -24,6 +26,8 @@ class ProgressStepperWidget extends StatelessWidget {
     required this.onDecrement,
     required this.onDirectProgressSet,
     this.onDirectVolumeSet,
+    this.onDirectTotalSet,
+    this.onDirectTotalVolumesSet,
   });
 
   @override
@@ -69,13 +73,57 @@ class ProgressStepperWidget extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '${currentVolume ?? 1}${totalVolumes != null ? ' / $totalVolumes' : ''}',
+                      '${currentVolume ?? 1}',
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 ),
+                if (onDirectTotalVolumesSet != null) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Text(
+                      '/',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => _showNullableNumberDialog(
+                      context: context,
+                      title: 'Set Total Volumes',
+                      initialValue: totalVolumes,
+                      onSaved: (val) => onDirectTotalVolumesSet?.call(val),
+                    ),
+                    child: Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        totalVolumes != null ? '$totalVolumes' : 'Total: --',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: totalVolumes != null
+                              ? null
+                              : colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                ] else if (totalVolumes != null) ...[
+                  Text(
+                    ' / $totalVolumes',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 12),
@@ -103,36 +151,82 @@ class ProgressStepperWidget extends StatelessWidget {
               ),
               const SizedBox(width: 24),
 
-              // Current value clickable
-              InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () => _showNumberDialog(
-                  context: context,
-                  title: 'Set ${unit.label}',
-                  initialValue: currentProgress,
-                  onSaved: onDirectProgressSet,
-                ),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  child: Column(
-                    children: [
-                      Text(
-                        currentProgress.toString(),
-                        style: theme.textTheme.headlineLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: colorScheme.primary,
+              // Current value and total progress
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                child: Column(
+                  children: [
+                    InkWell(
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: () => _showNumberDialog(
+                        context: context,
+                        title: 'Set ${unit.label}',
+                        initialValue: currentProgress,
+                        onSaved: onDirectProgressSet,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 2),
+                        child: Text(
+                          currentProgress.toString(),
+                          style: theme.textTheme.headlineLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: colorScheme.primary,
+                          ),
                         ),
                       ),
-                      Text(
-                        _formatSubtext(),
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                          letterSpacing: 0.2,
+                    ),
+                    if (onDirectTotalSet != null &&
+                        unit != ProgressUnit.percent) ...[
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () => _showNullableNumberDialog(
+                          context: context,
+                          title: 'Set Total ${unit.label}s',
+                          initialValue: totalProgress,
+                          onSaved: (val) => onDirectTotalSet?.call(val),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _formatSubtext(),
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                  letterSpacing: 0.2,
+                                  decoration: TextDecoration.underline,
+                                  decorationStyle: TextDecorationStyle.dotted,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.edit_outlined,
+                                size: 12,
+                                color: colorScheme.onSurfaceVariant
+                                    .withValues(alpha: 0.7),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ] else ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        child: Text(
+                          _formatSubtext(),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            letterSpacing: 0.2,
+                          ),
                         ),
                       ),
                     ],
-                  ),
+                  ],
                 ),
               ),
 
@@ -158,7 +252,6 @@ class ProgressStepperWidget extends StatelessWidget {
       ),
     );
   }
-
 
   String _formatSubtext() {
     switch (unit) {
@@ -202,6 +295,64 @@ class ProgressStepperWidget extends StatelessWidget {
                 final val = int.tryParse(controller.text.trim());
                 if (val != null && val >= 0) {
                   onSaved(val);
+                }
+                Navigator.pop(ctx);
+              },
+              child: const Text('Set'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showNullableNumberDialog({
+    required BuildContext context,
+    required String title,
+    required int? initialValue,
+    required ValueChanged<int?> onSaved,
+  }) {
+    final controller = TextEditingController(
+      text: initialValue != null ? initialValue.toString() : '',
+    );
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text(title),
+          content: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Total Count',
+              hintText: 'Leave empty if ongoing / unknown',
+            ),
+          ),
+          actions: [
+            if (initialValue != null)
+              TextButton(
+                onPressed: () {
+                  onSaved(null);
+                  Navigator.pop(ctx);
+                },
+                child: const Text('Clear'),
+              ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final text = controller.text.trim();
+                if (text.isEmpty) {
+                  onSaved(null);
+                } else {
+                  final val = int.tryParse(text);
+                  if (val != null && val >= 0) {
+                    onSaved(val);
+                  }
                 }
                 Navigator.pop(ctx);
               },

@@ -304,6 +304,18 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                     volumeValue: vol,
                   );
                 },
+                onDirectTotalSet: (total) {
+                  repo.updateTotalProgress(
+                    workId: work.id,
+                    totalProgress: total,
+                  );
+                },
+                onDirectTotalVolumesSet: (totalVols) {
+                  repo.updateTotalVolumes(
+                    workId: work.id,
+                    totalVolumes: totalVols,
+                  );
+                },
               ),
               const SizedBox(height: 16),
 

@@ -226,4 +226,68 @@ void main() {
     expect(completedWork.work.status, ReadingStatus.completed.value);
     expect(completedWork.work.completedAt, isNotNull);
   });
+
+  test('updateTotalProgress updates total count without creating progress log', () async {
+    final workId = await workRepo.createWork(
+      title: 'Ongoing Web Serial',
+      status: ReadingStatus.reading.value,
+      progressUnit: 'chapter',
+      currentProgress: 120,
+      totalProgress: 185,
+    );
+
+    // Initial log created at creation
+    final initialLogs = await logRepo.getLogsForWork(workId);
+    expect(initialLogs.length, 1);
+    expect(initialLogs.first.progressValue, 120);
+
+    // 2 new chapters drop: update total from 185 to 187
+    await workRepo.updateTotalProgress(
+      workId: workId,
+      totalProgress: 187,
+    );
+
+    final updated = await workRepo.getWorkWithTags(workId);
+    expect(updated!.work.currentProgress, 120);
+    expect(updated.work.totalProgress, 187);
+
+    // Progress logs count must still be 1 (NO new reading log created!)
+    final logsAfter = await logRepo.getLogsForWork(workId);
+    expect(logsAfter.length, 1);
+  });
+
+  test('updateWork does not create a progress log when total changes but current progress is unchanged', () async {
+    final workId = await workRepo.createWork(
+      title: 'Ongoing Web Novel',
+      status: ReadingStatus.reading.value,
+      progressUnit: 'chapter',
+      currentProgress: 120,
+      totalProgress: 185,
+    );
+
+    final initialLogs = await logRepo.getLogsForWork(workId);
+    expect(initialLogs.length, 1);
+
+    // Edit form submitted with new total: 187 chapters, currentProgress still 120
+    await workRepo.updateWork(
+      id: workId,
+      title: 'Ongoing Web Novel',
+      format: 'web_novel',
+      status: ReadingStatus.reading.value,
+      publicationStatus: 'ongoing',
+      progressUnit: 'chapter',
+      currentProgress: 120,
+      totalProgress: 187,
+      currentVolume: null,
+      totalVolumes: null,
+    );
+
+    final updated = await workRepo.getWorkWithTags(workId);
+    expect(updated!.work.currentProgress, 120);
+    expect(updated.work.totalProgress, 187);
+
+    // No new progress log created!
+    final logsAfter = await logRepo.getLogsForWork(workId);
+    expect(logsAfter.length, 1);
+  });
 }
