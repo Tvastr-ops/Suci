@@ -279,7 +279,7 @@ class SettingsScreen extends ConsumerWidget {
             child: Column(
               children: [
                 Text(
-                  'Sūcī v1.1.1',
+                  'Sūcī v1.1.2',
                   style: theme.textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: colorScheme.onSurfaceVariant,

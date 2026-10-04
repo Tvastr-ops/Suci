@@ -210,11 +210,9 @@ class WorkRepository {
       effectiveStartedAt = now;
     }
 
-    DateTime? effectiveCompletedAt = completedAt;
-    if (effectiveCompletedAt == null &&
-        status == ReadingStatus.completed.value) {
-      effectiveCompletedAt = now;
-    }
+    final isReading = status == ReadingStatus.reading.value;
+    final effectiveLastReadAt =
+        lastReadAt ?? (isReading && currentProgress > 0 ? now : null);
 
     final work = Work(
       id: workId,
@@ -237,15 +235,15 @@ class WorkRepository {
       createdAt: createdAt ?? now,
       updatedAt: updatedAt ?? now,
       startedAt: effectiveStartedAt,
-      completedAt: effectiveCompletedAt,
-      lastReadAt: lastReadAt ?? (currentProgress > 0 ? now : null),
+      completedAt: completedAt,
+      lastReadAt: effectiveLastReadAt,
     );
 
     await _db.transaction(() async {
       await _db.into(_db.works).insert(work);
       await _tagRepo.setTagsForWork(workId, tags);
 
-      if (currentProgress > 0) {
+      if (isReading && currentProgress > 0) {
         await _progressLogRepo.addLog(
           workId: workId,
           progressUnit: progressUnit,
@@ -370,6 +368,13 @@ class WorkRepository {
 
     if (existing == null) return;
 
+    // Guard against progressing completed works or going beyond total progress
+    if (existing.status == ReadingStatus.completed.value) return;
+    if (existing.totalProgress != null &&
+        existing.currentProgress >= existing.totalProgress!) {
+      return;
+    }
+
     final now = DateTime.now();
     final newProgress = existing.currentProgress + amount;
 
@@ -397,6 +402,12 @@ class WorkRepository {
       completedAt ??= now;
     }
 
+    final latestLog = await _progressLogRepo.getLatestLogForWork(workId);
+    final canDebounce = latestLog != null &&
+        latestLog.note != 'Initial progress' &&
+        now.difference(latestLog.recordedAt).inMinutes < 30 &&
+        latestLog.progressUnit == existing.progressUnit;
+
     await _db.transaction(() async {
       await (_db.update(_db.works)..where((w) => w.id.equals(workId))).write(
         WorksCompanion(
@@ -409,14 +420,23 @@ class WorkRepository {
         ),
       );
 
-      await _progressLogRepo.addLog(
-        workId: workId,
-        progressUnit: existing.progressUnit,
-        progressValue: newProgress,
-        volumeValue: existing.currentVolume,
-        note: null,
-        recordedAt: now,
-      );
+      if (canDebounce) {
+        await _progressLogRepo.updateLog(
+          id: latestLog.id,
+          progressValue: newProgress,
+          volumeValue: existing.currentVolume,
+          recordedAt: now,
+        );
+      } else {
+        await _progressLogRepo.addLog(
+          workId: workId,
+          progressUnit: existing.progressUnit,
+          progressValue: newProgress,
+          volumeValue: existing.currentVolume,
+          note: null,
+          recordedAt: now,
+        );
+      }
     });
   }
 

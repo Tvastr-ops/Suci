@@ -235,10 +235,13 @@ class ProgressStepperWidget extends StatelessWidget {
               // Increment button
               IconButton.filled(
                 icon: const Icon(Icons.add_rounded, size: 22),
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  onIncrement();
-                },
+                onPressed: (totalProgress != null &&
+                        currentProgress >= totalProgress!)
+                    ? null
+                    : () {
+                        HapticFeedback.lightImpact();
+                        onIncrement();
+                      },
                 style: IconButton.styleFrom(
                   minimumSize: const Size(48, 48),
                   shape: RoundedRectangleBorder(

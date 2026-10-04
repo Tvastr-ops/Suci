@@ -283,6 +283,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.82,
+      ),
       builder: (ctx) => const FilterBottomSheet(),
     );
   }

@@ -185,31 +185,62 @@ class WorkCard extends ConsumerWidget {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 1-tap +1 increment button (long-press for custom amount)
-                  FilledButton.tonal(
-                    style: FilledButton.styleFrom(
+                  if (work.status == ReadingStatus.completed.value ||
+                      (work.totalProgress != null &&
+                          work.currentProgress >= work.totalProgress!))
+                    Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      minimumSize: const Size(42, 34),
-                      shape: RoundedRectangleBorder(
+                          horizontal: 8, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primaryContainer
+                            .withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                    ),
-                    onPressed: () {
-                      HapticFeedback.lightImpact();
-                      ref
-                          .read(workRepositoryProvider)
-                          .incrementProgress(work.id);
-                    },
-                    onLongPress: () => _showQuickIncrementSheet(context, ref),
-                    child: Text(
-                      '+1',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: colorScheme.onSecondaryContainer,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.check_rounded,
+                            size: 14,
+                            color: colorScheme.primary,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            'Done',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    // 1-tap +1 increment button (long-press for custom amount)
+                    FilledButton.tonal(
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        minimumSize: const Size(42, 34),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        ref
+                            .read(workRepositoryProvider)
+                            .incrementProgress(work.id);
+                      },
+                      onLongPress: () => _showQuickIncrementSheet(context, ref),
+                      child: Text(
+                        '+1',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: colorScheme.onSecondaryContainer,
+                        ),
                       ),
                     ),
-                  ),
 
                   // Source URL link button if URL exists
                   if (work.sourceUrl != null && work.sourceUrl!.isNotEmpty) ...[

@@ -11,14 +11,20 @@ class ProgressLogRepository {
   Stream<List<ProgressLog>> watchLogsForWork(String workId) {
     return (_db.select(_db.progressLogs)
           ..where((l) => l.workId.equals(workId))
-          ..orderBy([(l) => OrderingTerm.desc(l.recordedAt)]))
+          ..orderBy([
+            (l) => OrderingTerm.desc(l.recordedAt),
+            (l) => OrderingTerm.desc(l.rowId),
+          ]))
         .watch();
   }
 
   Future<List<ProgressLog>> getLogsForWork(String workId, {int? limit}) {
     final query = (_db.select(_db.progressLogs)
       ..where((l) => l.workId.equals(workId))
-      ..orderBy([(l) => OrderingTerm.desc(l.recordedAt)]));
+      ..orderBy([
+        (l) => OrderingTerm.desc(l.recordedAt),
+        (l) => OrderingTerm.desc(l.rowId),
+      ]));
 
     if (limit != null) {
       query.limit(limit);
@@ -48,6 +54,28 @@ class ProgressLogRepository {
 
     await _db.into(_db.progressLogs).insert(log);
     return log;
+  }
+
+  Future<ProgressLog?> getLatestLogForWork(String workId) async {
+    final logs = await getLogsForWork(workId, limit: 1);
+    return logs.isEmpty ? null : logs.first;
+  }
+
+  Future<void> updateLog({
+    required String id,
+    int? progressValue,
+    int? volumeValue,
+    String? note,
+    DateTime? recordedAt,
+  }) async {
+    await (_db.update(_db.progressLogs)..where((l) => l.id.equals(id))).write(
+      ProgressLogsCompanion(
+        progressValue: progressValue == null ? const Value.absent() : Value(progressValue),
+        volumeValue: volumeValue == null ? const Value.absent() : Value(volumeValue),
+        note: note == null ? const Value.absent() : Value(note),
+        recordedAt: recordedAt == null ? const Value.absent() : Value(recordedAt),
+      ),
+    );
   }
 
   Future<void> deleteLog(String id) {

@@ -137,6 +137,51 @@ void main() {
     // Only Completed work visible
     expect(find.text('Super Supportive'), findsNothing);
     expect(find.text('Mother of Learning'), findsOneWidget);
+    expect(find.text('Done'), findsOneWidget);
+    expect(find.text('+1'), findsNothing);
+
+    await db.close();
+  });
+
+  testWidgets('Completed work card shows Done badge instead of +1 button',
+      (WidgetTester tester) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    final tagRepo = TagRepository(db);
+    final logRepo = ProgressLogRepository(db);
+    final workRepo = WorkRepository(db, tagRepo, logRepo);
+
+    await workRepo.createWork(
+      title: 'Finished Novel',
+      status: ReadingStatus.completed.value,
+      progressUnit: 'chapter',
+      currentProgress: 100,
+      totalProgress: 100,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          tagRepositoryProvider.overrideWithValue(tagRepo),
+          progressLogRepositoryProvider.overrideWithValue(logRepo),
+          workRepositoryProvider.overrideWithValue(workRepo),
+        ],
+        child: const SuciApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Go to All shelf
+    final allPill = find.descendant(
+      of: find.byType(StatusChipRow),
+      matching: find.text('All'),
+    );
+    await tester.tap(allPill);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Finished Novel'), findsOneWidget);
+    expect(find.text('Done'), findsOneWidget);
+    expect(find.text('+1'), findsNothing);
 
     await db.close();
   });

@@ -290,4 +290,92 @@ void main() {
     final logsAfter = await logRepo.getLogsForWork(workId);
     expect(logsAfter.length, 1);
   });
+
+  test('createWork with completed status leaves lastReadAt null and creates no progress log', () async {
+    final workId = await workRepo.createWork(
+      title: 'Completed Novel',
+      status: ReadingStatus.completed.value,
+      progressUnit: 'chapter',
+      currentProgress: 500,
+      totalProgress: 500,
+    );
+
+    final workData = await workRepo.getWorkWithTags(workId);
+    expect(workData!.work.lastReadAt, isNull);
+
+    final logs = await logRepo.getLogsForWork(workId);
+    expect(logs, isEmpty);
+  });
+
+  test('incrementProgress does not increment completed works or beyond total progress', () async {
+    final workId = await workRepo.createWork(
+      title: 'Finished Book',
+      status: ReadingStatus.completed.value,
+      progressUnit: 'chapter',
+      currentProgress: 100,
+      totalProgress: 100,
+    );
+
+    await workRepo.incrementProgress(workId);
+    final workData = await workRepo.getWorkWithTags(workId);
+    expect(workData!.work.currentProgress, 100);
+
+    final logs = await logRepo.getLogsForWork(workId);
+    expect(logs, isEmpty);
+  });
+
+  test('incrementProgress debounces rapid sessions within 30 minutes into single log', () async {
+    final workId = await workRepo.createWork(
+      title: 'Active Manga',
+      status: ReadingStatus.reading.value,
+      progressUnit: 'chapter',
+      currentProgress: 10,
+      totalProgress: 50,
+    );
+
+    final initialLogs = await logRepo.getLogsForWork(workId);
+    expect(initialLogs.length, 1);
+    expect(initialLogs.first.progressValue, 10);
+
+    // Increment 3 times rapidly
+    await workRepo.incrementProgress(workId);
+    await workRepo.incrementProgress(workId);
+    await workRepo.incrementProgress(workId);
+
+    final updated = await workRepo.getWorkWithTags(workId);
+    expect(updated!.work.currentProgress, 13);
+
+    // Logs count must be 2: Initial progress (10) + debounced session log (updated to 13)
+    final logsAfter = await logRepo.getLogsForWork(workId);
+    expect(logsAfter.length, 2);
+    expect(logsAfter.first.progressValue, 13);
+    expect(logsAfter.last.progressValue, 10);
+  });
+
+  test('ProgressLogRepository updateLog and deleteLog work as expected', () async {
+    final workId = await workRepo.createWork(
+      title: 'Test Work',
+      status: ReadingStatus.reading.value,
+      progressUnit: 'chapter',
+      currentProgress: 1,
+    );
+
+    final logs = await logRepo.getLogsForWork(workId);
+    expect(logs.length, 1);
+    final logId = logs.first.id;
+
+    await logRepo.updateLog(
+      id: logId,
+      progressValue: 5,
+      note: 'Updated Note',
+    );
+
+    final updatedLogs = await logRepo.getLogsForWork(workId);
+    expect(updatedLogs.first.progressValue, 5);
+    expect(updatedLogs.first.note, 'Updated Note');
+
+    await logRepo.deleteLog(logId);
+    final emptyLogs = await logRepo.getLogsForWork(workId);
+    expect(emptyLogs, isEmpty);
+  });
 }

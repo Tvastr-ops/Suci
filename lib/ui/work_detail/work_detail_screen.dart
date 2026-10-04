@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../data/database/app_database.dart';
+import '../../data/repositories/progress_log_repository.dart';
 import '../../domain/enums/progress_unit.dart';
 import '../../domain/enums/publication_status.dart';
 import '../../domain/enums/reading_status.dart';
@@ -512,52 +515,72 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                             Expanded(
                               child: Padding(
                                 padding: EdgeInsets.only(bottom: isLast ? 0 : 16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(8),
+                                  onTap: () => _showLogOptions(context, log),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 4),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          '$unitLabel ${log.progressValue}',
-                                          style: theme.textTheme.labelMedium
-                                              ?.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                          ),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              '$unitLabel ${log.progressValue}',
+                                              style: theme.textTheme.labelMedium
+                                                  ?.copyWith(
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                            if (log.volumeValue != null) ...[
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                '(Vol ${log.volumeValue})',
+                                                style: theme.textTheme.labelSmall
+                                                    ?.copyWith(
+                                                  color: colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
+                                              ),
+                                            ],
+                                            const Spacer(),
+                                            Text(
+                                              dateStr,
+                                              style: theme.textTheme.labelSmall
+                                                  ?.copyWith(
+                                                color: colorScheme
+                                                    .onSurfaceVariant
+                                                    .withValues(alpha: 0.7),
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Icon(
+                                              Icons.more_vert_rounded,
+                                              size: 14,
+                                              color: colorScheme
+                                                  .onSurfaceVariant
+                                                  .withValues(alpha: 0.5),
+                                            ),
+                                          ],
                                         ),
-                                        if (log.volumeValue != null) ...[
-                                          const SizedBox(width: 4),
+                                        if (log.note != null &&
+                                            log.note!.isNotEmpty) ...[
+                                          const SizedBox(height: 2),
                                           Text(
-                                            '(Vol ${log.volumeValue})',
-                                            style: theme.textTheme.labelSmall
+                                            log.note!,
+                                            style: theme.textTheme.bodySmall
                                                 ?.copyWith(
-                                              color: colorScheme.onSurfaceVariant,
+                                              color: colorScheme
+                                                  .onSurfaceVariant,
                                             ),
                                           ),
                                         ],
-                                        const Spacer(),
-                                        Text(
-                                          dateStr,
-                                          style: theme.textTheme.labelSmall
-                                              ?.copyWith(
-                                            color: colorScheme.onSurfaceVariant
-                                                .withValues(alpha: 0.7),
-                                            fontSize: 11,
-                                          ),
-                                        ),
                                       ],
                                     ),
-                                    if (log.note != null &&
-                                        log.note!.isNotEmpty) ...[
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        log.note!,
-                                        style: theme.textTheme.bodySmall
-                                            ?.copyWith(
-                                          color: colorScheme.onSurfaceVariant,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -877,6 +900,173 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                 ref.read(workRepositoryProvider).deleteWork(workId);
                 Navigator.pop(ctx);
                 context.pop();
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showLogOptions(BuildContext context, ProgressLog log) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final logRepo = ref.read(progressLogRepositoryProvider);
+
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('Edit Log'),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showEditLogDialog(context, log, logRepo);
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  Icons.delete_outline_rounded,
+                  color: colorScheme.error,
+                ),
+                title: Text(
+                  'Delete Log',
+                  style: TextStyle(color: colorScheme.error),
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _confirmDeleteLog(context, log, logRepo);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showEditLogDialog(
+    BuildContext context,
+    ProgressLog log,
+    ProgressLogRepository logRepo,
+  ) {
+    final progressController =
+        TextEditingController(text: log.progressValue.toString());
+    final volumeController = TextEditingController(
+        text: log.volumeValue != null ? log.volumeValue.toString() : '');
+    final noteController = TextEditingController(text: log.note ?? '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Edit Progress Log'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: progressController,
+                  decoration: InputDecoration(
+                    labelText:
+                        '${ProgressUnit.fromValue(log.progressUnit).label} Number',
+                    border: const OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: volumeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Volume (optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: noteController,
+                  decoration: const InputDecoration(
+                    labelText: 'Note (optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final newProgress =
+                    int.tryParse(progressController.text.trim());
+                if (newProgress == null) return;
+                final newVolume = int.tryParse(volumeController.text.trim());
+                final newNote = noteController.text.trim();
+
+                await logRepo.updateLog(
+                  id: log.id,
+                  progressValue: newProgress,
+                  volumeValue: newVolume,
+                  note: newNote.isEmpty ? null : newNote,
+                );
+                if (ctx.mounted) Navigator.pop(ctx);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _confirmDeleteLog(
+    BuildContext context,
+    ProgressLog log,
+    ProgressLogRepository logRepo,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Delete Log?'),
+          content:
+              const Text('Are you sure you want to delete this progress log?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
+              onPressed: () async {
+                await logRepo.deleteLog(log.id);
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Log deleted')),
+                  );
+                }
               },
               child: const Text('Delete'),
             ),
