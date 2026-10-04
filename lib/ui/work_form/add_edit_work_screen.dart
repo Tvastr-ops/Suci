@@ -305,8 +305,9 @@ class _AddEditWorkScreenState extends ConsumerState<AddEditWorkScreen> {
                 Text(
                   'Shelf / Status',
                   style: theme.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                     color: colorScheme.onSurfaceVariant,
+                    letterSpacing: 0.2,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -364,8 +365,9 @@ class _AddEditWorkScreenState extends ConsumerState<AddEditWorkScreen> {
                 Text(
                   'Track Progress By',
                   style: theme.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                     color: colorScheme.onSurfaceVariant,
+                    letterSpacing: 0.2,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -407,7 +409,7 @@ class _AddEditWorkScreenState extends ConsumerState<AddEditWorkScreen> {
                     ),
                     decoration: BoxDecoration(
                       color: colorScheme.surfaceContainerHighest.withValues(
-                        alpha: 0.4,
+                        alpha: 0.35,
                       ),
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -415,10 +417,10 @@ class _AddEditWorkScreenState extends ConsumerState<AddEditWorkScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Add More Details',
+                          'Additional Details',
                           style: theme.textTheme.titleSmall?.copyWith(
                             color: colorScheme.primary,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         Icon(

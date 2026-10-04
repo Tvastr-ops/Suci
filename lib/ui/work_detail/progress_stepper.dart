@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../domain/enums/progress_unit.dart';
 
 class ProgressStepperWidget extends StatelessWidget {
@@ -31,12 +32,12 @@ class ProgressStepperWidget extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+        color: colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.2),
         ),
       ),
       child: Column(
@@ -48,7 +49,7 @@ class ProgressStepperWidget extends StatelessWidget {
               children: [
                 Text(
                   'Volume: ',
-                  style: theme.textTheme.labelLarge?.copyWith(
+                  style: theme.textTheme.labelMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),
@@ -64,13 +65,13 @@ class ProgressStepperWidget extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest,
+                      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       '${currentVolume ?? 1}${totalVolumes != null ? ' / $totalVolumes' : ''}',
                       style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -86,13 +87,21 @@ class ProgressStepperWidget extends StatelessWidget {
             children: [
               // Decrement button
               IconButton.filledTonal(
-                icon: const Icon(Icons.remove_rounded, size: 24),
-                onPressed: currentProgress > 0 ? onDecrement : null,
+                icon: const Icon(Icons.remove_rounded, size: 22),
+                onPressed: currentProgress > 0
+                    ? () {
+                        HapticFeedback.lightImpact();
+                        onDecrement();
+                      }
+                    : null,
                 style: IconButton.styleFrom(
                   minimumSize: const Size(48, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
               ),
-              const SizedBox(width: 20),
+              const SizedBox(width: 24),
 
               // Current value clickable
               InkWell(
@@ -105,13 +114,13 @@ class ProgressStepperWidget extends StatelessWidget {
                 ),
                 child: Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   child: Column(
                     children: [
                       Text(
                         currentProgress.toString(),
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                        style: theme.textTheme.headlineLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
                           color: colorScheme.primary,
                         ),
                       ),
@@ -119,6 +128,7 @@ class ProgressStepperWidget extends StatelessWidget {
                         _formatSubtext(),
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
+                          letterSpacing: 0.2,
                         ),
                       ),
                     ],
@@ -126,14 +136,20 @@ class ProgressStepperWidget extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(width: 20),
+              const SizedBox(width: 24),
 
               // Increment button
               IconButton.filled(
-                icon: const Icon(Icons.add_rounded, size: 24),
-                onPressed: onIncrement,
+                icon: const Icon(Icons.add_rounded, size: 22),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  onIncrement();
+                },
                 style: IconButton.styleFrom(
                   minimumSize: const Size(48, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
               ),
             ],
@@ -142,6 +158,7 @@ class ProgressStepperWidget extends StatelessWidget {
       ),
     );
   }
+
 
   String _formatSubtext() {
     switch (unit) {

@@ -118,13 +118,25 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CoverWidget(
-                    title: work.title,
-                    coverPath: work.coverPath,
-                    width: 90,
-                    height: 130,
-                    borderRadius: 12,
-                    showTitleInFallback: true,
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.12),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: CoverWidget(
+                      title: work.title,
+                      coverPath: work.coverPath,
+                      width: 96,
+                      height: 140,
+                      borderRadius: 12,
+                      showTitleInFallback: true,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -134,8 +146,8 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                         Text(
                           work.title,
                           style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            height: 1.2,
+                            fontWeight: FontWeight.w700,
+                            height: 1.25,
                           ),
                         ),
                         if (work.author != null &&
@@ -162,7 +174,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                         // Interactive rating
                         StarRatingWidget(
                           rating: work.rating,
-                          size: 24,
+                          size: 22,
                           showNumber: true,
                           onRatingChanged: (newRating) {
                             repo.updateWork(
@@ -229,45 +241,46 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                   Text(
                     'Reading Status',
                     style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  DropdownButton<ReadingStatus>(
-                    value: readingStatus,
-                    underline: const SizedBox(),
-                    items: ReadingStatus.values.map((s) {
-                      return DropdownMenuItem(
-                        value: s,
-                        child: Text(s.label),
-                      );
-                    }).toList(),
-                    onChanged: (newStatus) {
-                      if (newStatus != null) {
-                        repo.updateWork(
-                          id: work.id,
-                          title: work.title,
-                          author: work.author,
-                          sourceUrl: work.sourceUrl,
-                          additionalUrlsJson: work.additionalUrls,
-                          format: work.format,
-                          status: newStatus.value,
-                          publicationStatus: work.publicationStatus,
-                          coverPath: work.coverPath,
-                          progressUnit: work.progressUnit,
-                          currentProgress: work.currentProgress,
-                          totalProgress: work.totalProgress,
-                          currentVolume: work.currentVolume,
-                          totalVolumes: work.totalVolumes,
-                          rating: work.rating,
-                          notes: work.notes,
-                          synopsis: work.synopsis,
-                        );
-                      }
-                    },
+                  InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () => _showStatusPicker(context, work),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: colorScheme.secondaryContainer
+                            .withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: colorScheme.primary.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            readingStatus.label,
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: colorScheme.onSecondaryContainer,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.expand_more_rounded,
+                            size: 18,
+                            color: colorScheme.onSecondaryContainer,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
 
               // Interactive Progress Stepper
               ProgressStepperWidget(
@@ -303,7 +316,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                 Text(
                   'Tags',
                   style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -325,16 +338,16 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                 Text(
                   'Synopsis',
                   style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(14),
                     child: Text(
                       work.synopsis!,
-                      style: theme.textTheme.bodyMedium?.copyWith(height: 1.4),
+                      style: theme.textTheme.bodyMedium?.copyWith(height: 1.5),
                     ),
                   ),
                 ),
@@ -348,7 +361,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                   Text(
                     'Personal Notes',
                     style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                   TextButton.icon(
@@ -403,7 +416,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
               else
                 Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(14),
                     child: Text(
                       work.notes?.isNotEmpty == true
                           ? work.notes!
@@ -415,6 +428,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                         fontStyle: work.notes?.isNotEmpty == true
                             ? FontStyle.normal
                             : FontStyle.italic,
+                        height: 1.4,
                       ),
                     ),
                   ),
@@ -425,10 +439,10 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
               Text(
                 'Progress History',
                 style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               StreamBuilder(
                 stream: logRepo.watchLogsForWork(work.id),
                 builder: (context, logSnapshot) {
@@ -443,29 +457,102 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                     );
                   }
 
-                  return Column(
-                    children: logs.take(10).map((log) {
+                  final displayLogs = logs.take(10).toList();
+
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: displayLogs.length,
+                    itemBuilder: (context, index) {
+                      final log = displayLogs[index];
                       final dateStr = DateFormat('MMM d, y • h:mm a')
                           .format(log.recordedAt);
                       final unitLabel =
                           ProgressUnit.fromValue(log.progressUnit).label;
+                      final isLast = index == displayLogs.length - 1;
 
-                      return ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.bookmark_added_outlined,
-                            size: 18),
-                        title: Text(
-                          '$unitLabel ${log.progressValue}${log.volumeValue != null ? ' (Vol ${log.volumeValue})' : ''}',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: Text(
-                          log.note != null && log.note!.isNotEmpty
-                              ? '$dateStr — ${log.note}'
-                              : dateStr,
+                      return IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Column(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  margin: const EdgeInsets.only(top: 5),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: colorScheme.primary,
+                                  ),
+                                ),
+                                if (!isLast)
+                                  Expanded(
+                                    child: Container(
+                                      width: 1.5,
+                                      color: colorScheme.outlineVariant
+                                          .withValues(alpha: 0.35),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Padding(
+                                padding: EdgeInsets.only(bottom: isLast ? 0 : 16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          '$unitLabel ${log.progressValue}',
+                                          style: theme.textTheme.labelMedium
+                                              ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        if (log.volumeValue != null) ...[
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '(Vol ${log.volumeValue})',
+                                            style: theme.textTheme.labelSmall
+                                                ?.copyWith(
+                                              color: colorScheme.onSurfaceVariant,
+                                            ),
+                                          ),
+                                        ],
+                                        const Spacer(),
+                                        Text(
+                                          dateStr,
+                                          style: theme.textTheme.labelSmall
+                                              ?.copyWith(
+                                            color: colorScheme.onSurfaceVariant
+                                                .withValues(alpha: 0.7),
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (log.note != null &&
+                                        log.note!.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        log.note!,
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                          color: colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       );
-                    }).toList(),
+                    },
                   );
                 },
               ),
@@ -479,18 +566,64 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     );
   }
 
+  void _showStatusPicker(BuildContext context, dynamic work) {
+    final repo = ref.read(workRepositoryProvider);
+    showModalBottomSheet(
+      context: context,
+      useRootNavigator: true,
+      showDragHandle: true,
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: ReadingStatus.values.map((s) {
+              final isSelected = work.status == s.value;
+              return ListTile(
+                title: Text(s.label),
+                selected: isSelected,
+                trailing: isSelected ? const Icon(Icons.check_rounded) : null,
+                onTap: () {
+                  repo.updateWork(
+                    id: work.id,
+                    title: work.title,
+                    author: work.author,
+                    sourceUrl: work.sourceUrl,
+                    additionalUrlsJson: work.additionalUrls,
+                    format: work.format,
+                    status: s.value,
+                    publicationStatus: work.publicationStatus,
+                    coverPath: work.coverPath,
+                    progressUnit: work.progressUnit,
+                    currentProgress: work.currentProgress,
+                    totalProgress: work.totalProgress,
+                    currentVolume: work.currentVolume,
+                    totalVolumes: work.totalVolumes,
+                    rating: work.rating,
+                    notes: work.notes,
+                    synopsis: work.synopsis,
+                  );
+                  Navigator.pop(ctx);
+                },
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildChipBadge(BuildContext context, String text,
       {bool isMuted = false}) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: isMuted
-            ? colorScheme.surfaceContainerHighest
-            : colorScheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(8),
+            ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.6)
+            : colorScheme.secondaryContainer.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         text,
@@ -506,35 +639,53 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
 
   Widget _buildDatesRow(BuildContext context, dynamic work) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final dateFormat = DateFormat('MMM d, y');
 
     final startedAt = work.startedAt as DateTime?;
     final completedAt = work.completedAt as DateTime?;
     final lastReadAt = work.lastReadAt as DateTime?;
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        _buildDateItem(
-          theme,
-          'Started',
-          startedAt != null ? dateFormat.format(startedAt) : 'Set start date',
-          onTap: () => _editDate(context, work, isStarted: true),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.2),
         ),
-        if (lastReadAt != null)
-          _buildDateItem(theme, 'Last Read', dateFormat.format(lastReadAt)),
-        _buildDateItem(
-          theme,
-          'Completed',
-          completedAt != null ? dateFormat.format(completedAt) : 'Set completed',
-          onTap: () => _editDate(context, work, isStarted: false),
-        ),
-      ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildDateItem(
+            theme,
+            'Started',
+            startedAt != null ? dateFormat.format(startedAt) : 'Set start date',
+            hasValue: startedAt != null,
+            onTap: () => _editDate(context, work, isStarted: true),
+          ),
+          if (lastReadAt != null)
+            _buildDateItem(
+              theme,
+              'Last Read',
+              dateFormat.format(lastReadAt),
+              hasValue: true,
+            ),
+          _buildDateItem(
+            theme,
+            'Completed',
+            completedAt != null ? dateFormat.format(completedAt) : 'Set completed',
+            hasValue: completedAt != null,
+            onTap: () => _editDate(context, work, isStarted: false),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildDateItem(ThemeData theme, String label, String value,
-      {VoidCallback? onTap}) {
+      {bool hasValue = false, VoidCallback? onTap}) {
     final content = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -558,7 +709,10 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
         Text(
           value,
           style: theme.textTheme.bodySmall?.copyWith(
-            fontWeight: FontWeight.bold,
+            fontWeight: hasValue ? FontWeight.w600 : FontWeight.normal,
+            color: hasValue
+                ? theme.colorScheme.onSurface
+                : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
           ),
         ),
       ],
@@ -583,6 +737,64 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     final currentDate = isStarted
         ? (work.startedAt as DateTime?)
         : (work.completedAt as DateTime?);
+
+    if (currentDate != null) {
+      final action = await showModalBottomSheet<String>(
+        context: context,
+        useRootNavigator: true,
+        showDragHandle: true,
+        builder: (ctx) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.calendar_today_rounded),
+                title: const Text('Change Date'),
+                onTap: () => Navigator.pop(ctx, 'change'),
+              ),
+              ListTile(
+                leading:
+                    const Icon(Icons.clear_rounded, color: Colors.redAccent),
+                title: const Text('Clear Date',
+                    style: TextStyle(color: Colors.redAccent)),
+                onTap: () => Navigator.pop(ctx, 'clear'),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (action == 'clear') {
+        await ref.read(workRepositoryProvider).updateWork(
+              id: work.id,
+              title: work.title,
+              author: work.author,
+              sourceUrl: work.sourceUrl,
+              additionalUrlsJson: work.additionalUrls,
+              format: work.format,
+              status: work.status,
+              publicationStatus: work.publicationStatus,
+              coverPath: work.coverPath,
+              progressUnit: work.progressUnit,
+              currentProgress: work.currentProgress,
+              totalProgress: work.totalProgress,
+              currentVolume: work.currentVolume,
+              totalVolumes: work.totalVolumes,
+              rating: work.rating,
+              notes: work.notes,
+              synopsis: work.synopsis,
+              startedAt: isStarted ? null : work.startedAt,
+              completedAt: !isStarted ? null : work.completedAt,
+              clearStartedAt: isStarted,
+              clearCompletedAt: !isStarted,
+            );
+        return;
+      } else if (action != 'change') {
+        return;
+      }
+      if (!context.mounted) return;
+    }
+
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
@@ -616,6 +828,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
           );
     }
   }
+
 
   Future<void> _openUrl(BuildContext context, String url) async {
     final uri = Uri.tryParse(url);

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -10,7 +11,6 @@ import '../../domain/enums/reading_status.dart';
 import '../../domain/enums/work_format.dart';
 import '../../providers/database_provider.dart';
 import '../shared/cover_fallback.dart';
-import '../shared/star_rating.dart';
 
 class WorkCard extends ConsumerWidget {
   final WorkWithTags item;
@@ -32,6 +32,11 @@ class WorkCard extends ConsumerWidget {
     final progressString = _formatProgress(work);
     final progressPercent = _calculatePercentage(work);
 
+    final metaParts = <String>[];
+    if (formatLabel.isNotEmpty) metaParts.add(formatLabel);
+    if (pubStatusLabel.isNotEmpty) metaParts.add(pubStatusLabel);
+    final metaLine = metaParts.join(' • ');
+
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -42,13 +47,25 @@ class WorkCard extends ConsumerWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Cover
-              CoverWidget(
-                title: work.title,
-                coverPath: work.coverPath,
-                width: 60,
-                height: 86,
-                borderRadius: 8,
+              // Cover with book-jacket depth shadow
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: CoverWidget(
+                  title: work.title,
+                  coverPath: work.coverPath,
+                  width: 58,
+                  height: 84,
+                  borderRadius: 8,
+                ),
               ),
               const SizedBox(width: 12),
 
@@ -61,8 +78,8 @@ class WorkCard extends ConsumerWidget {
                     Text(
                       work.title,
                       style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        height: 1.2,
+                        fontWeight: FontWeight.w600,
+                        height: 1.25,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -81,21 +98,22 @@ class WorkCard extends ConsumerWidget {
                       ),
                     ],
 
-                    const SizedBox(height: 4),
-
-                    // Format and Publication Status Badges
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: [
-                        _buildTinyBadge(context, formatLabel),
-                        _buildTinyBadge(context, pubStatusLabel, isMuted: true),
-                      ],
-                    ),
+                    if (metaLine.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        metaLine,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                          letterSpacing: 0.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
 
                     const SizedBox(height: 6),
 
-                    // Progress text & optional progress bar
+                    // Progress text & optional compact star rating
                     Row(
                       children: [
                         Expanded(
@@ -108,11 +126,30 @@ class WorkCard extends ConsumerWidget {
                           ),
                         ),
                         if (work.rating != null && work.rating! > 0)
-                          StarRatingWidget(
-                            rating: work.rating,
-                            size: 14,
-                            readOnly: true,
-                            showNumber: true,
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: colorScheme.secondaryContainer
+                                  .withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.star_rounded,
+                                    size: 13, color: colorScheme.primary),
+                                const SizedBox(width: 2),
+                                Text(
+                                  (work.rating! / 2.0).toStringAsFixed(1),
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 11,
+                                    color: colorScheme.onSecondaryContainer,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                       ],
                     ),
@@ -120,13 +157,21 @@ class WorkCard extends ConsumerWidget {
                     if (progressPercent != null) ...[
                       const SizedBox(height: 6),
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: progressPercent,
-                          minHeight: 4,
-                          backgroundColor: colorScheme.surfaceContainerHighest,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                        borderRadius: BorderRadius.circular(2),
+                        child: TweenAnimationBuilder<double>(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          tween: Tween<double>(begin: 0, end: progressPercent),
+                          builder: (context, value, _) {
+                            return LinearProgressIndicator(
+                              value: value,
+                              minHeight: 3,
+                              backgroundColor: colorScheme.surfaceContainerHighest
+                                  .withValues(alpha: 0.4),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  colorScheme.primary),
+                            );
+                          },
                         ),
                       ),
                     ],
@@ -144,21 +189,25 @@ class WorkCard extends ConsumerWidget {
                   FilledButton.tonal(
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 8),
-                      minimumSize: const Size(40, 36),
+                          horizontal: 10, vertical: 6),
+                      minimumSize: const Size(42, 34),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                     onPressed: () {
+                      HapticFeedback.lightImpact();
                       ref
                           .read(workRepositoryProvider)
                           .incrementProgress(work.id);
                     },
                     onLongPress: () => _showQuickIncrementSheet(context, ref),
-                    child: const Text(
+                    child: Text(
                       '+1',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.onSecondaryContainer,
+                      ),
                     ),
                   ),
 
@@ -181,30 +230,6 @@ class WorkCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildTinyBadge(BuildContext context, String text,
-      {bool isMuted = false}) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: isMuted
-            ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.6)
-            : colorScheme.secondaryContainer.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        text,
-        style: theme.textTheme.labelSmall?.copyWith(
-          fontSize: 10,
-          color: isMuted
-              ? colorScheme.onSurfaceVariant
-              : colorScheme.onSecondaryContainer,
-        ),
-      ),
-    );
-  }
 
   String _formatProgress(dynamic work) {
     final unit = ProgressUnit.fromValue(work.progressUnit);

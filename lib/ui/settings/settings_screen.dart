@@ -279,9 +279,9 @@ class SettingsScreen extends ConsumerWidget {
             child: Column(
               children: [
                 Text(
-                  'Suci v1.0.5',
+                  'Suci v1.1.0',
                   style: theme.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),
@@ -388,9 +388,10 @@ class SettingsScreen extends ConsumerWidget {
       padding: const EdgeInsets.only(left: 4, bottom: 8),
       child: Text(
         title,
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
               color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.2,
             ),
       ),
     );

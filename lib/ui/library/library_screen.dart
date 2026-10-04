@@ -33,31 +33,42 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: _isSearching
-            ? TextField(
-                controller: _searchController,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'Search title, author, tag...',
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  filled: false,
-                  contentPadding: EdgeInsets.zero,
+        title: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          child: _isSearching
+              ? TextField(
+                  key: const ValueKey('search_active'),
+                  controller: _searchController,
+                  autofocus: true,
+                  style: theme.textTheme.bodyLarge,
+                  decoration: InputDecoration(
+                    hintText: 'Search title, author, tag...',
+                    hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                    ),
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    filled: false,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  onChanged: (val) {
+                    ref
+                        .read(libraryFilterProvider.notifier)
+                        .setSearchQuery(val.isEmpty ? null : val);
+                  },
+                )
+              : Text(
+                  'Suci',
+                  key: const ValueKey('title_active'),
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.6,
+                  ),
                 ),
-                onChanged: (val) {
-                  ref
-                      .read(libraryFilterProvider.notifier)
-                      .setSearchQuery(val.isEmpty ? null : val);
-                },
-              )
-            : Text(
-                'Suci',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.5,
-                ),
-              ),
+        ),
         actions: [
           IconButton(
             icon: Icon(_isSearching ? Icons.close_rounded : Icons.search_rounded),
@@ -182,9 +193,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        elevation: 1,
+        highlightElevation: 3,
         onPressed: () => context.push('/work/add'),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Add Work'),
+        icon: const Icon(Icons.add_rounded, size: 20),
+        label: Text(
+          'Add Work',
+          style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+        ),
       ),
     );
   }
