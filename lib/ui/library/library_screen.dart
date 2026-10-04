@@ -60,13 +60,25 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         .setSearchQuery(val.isEmpty ? null : val);
                   },
                 )
-              : Text(
-                  'Suci',
-                  key: const ValueKey('title_active'),
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.6,
+              : Text.rich(
+                  TextSpan(
+                    text: 'Sūcī',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.7,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: '.',
+                        style: TextStyle(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
                   ),
+                  key: const ValueKey('title_active'),
                 ),
         ),
         actions: [
