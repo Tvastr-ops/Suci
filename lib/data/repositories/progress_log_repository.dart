@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
+import '../../domain/models/progress_log_entry.dart';
 import '../database/app_database.dart';
 
 class ProgressLogRepository {
@@ -18,6 +19,11 @@ class ProgressLogRepository {
         .watch();
   }
 
+  Stream<List<ProgressLogEntry>> watchLogEntriesForWork(String workId) {
+    return watchLogsForWork(workId)
+        .map((logs) => logs.map(ProgressLogEntry.fromDrift).toList());
+  }
+
   Future<List<ProgressLog>> getLogsForWork(String workId, {int? limit}) {
     final query = (_db.select(_db.progressLogs)
       ..where((l) => l.workId.equals(workId))
@@ -31,6 +37,11 @@ class ProgressLogRepository {
     }
 
     return query.get();
+  }
+
+  Future<List<ProgressLogEntry>> getLogEntriesForWork(String workId, {int? limit}) async {
+    final logs = await getLogsForWork(workId, limit: limit);
+    return logs.map(ProgressLogEntry.fromDrift).toList();
   }
 
   Future<ProgressLog> addLog({

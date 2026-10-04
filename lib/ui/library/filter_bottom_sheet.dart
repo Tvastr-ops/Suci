@@ -153,19 +153,19 @@ class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
                         );
                       }
 
-                      final hasCollapse = tags.length > 8;
+                      final hasCollapse = tags.length > 5;
                       final displayedTags = (hasCollapse && !_isTagsExpanded)
                           ? () {
-                              final top8 = tags.take(8).toList();
+                              final top5 = tags.take(5).toList();
                               if (_selectedTag != null &&
-                                  !top8.any((t) => t.name == _selectedTag)) {
+                                  !top5.any((t) => t.name == _selectedTag)) {
                                 final sel =
                                     tags.where((t) => t.name == _selectedTag);
                                 if (sel.isNotEmpty) {
-                                  top8.add(sel.first);
+                                  top5.add(sel.first);
                                 }
                               }
-                              return top8;
+                              return top5;
                             }()
                           : tags;
 

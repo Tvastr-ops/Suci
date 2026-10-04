@@ -1,5 +1,6 @@
 enum ProgressUnit {
   chapter('Chapter', 'chapter'),
+  volume('Volume', 'volume'),
   volumeChapter('Vol & Ch', 'volume_chapter'),
   words('Words', 'words'),
   percent('Percentage', 'percent');

@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
+import '../../core/logging/app_logger.dart';
 
 class SecurityService {
   final FlutterSecureStorage _storage;
@@ -157,9 +158,13 @@ class SecurityService {
 
       final available = await _localAuth.getAvailableBiometrics();
       return canCheck || available.isNotEmpty;
-    } on PlatformException {
+    } on PlatformException catch (e, stack) {
+      AppLogger.warn(
+          'Biometric capability check failed: ${e.message}', 'SecurityService', e, stack);
       return false;
-    } catch (_) {
+    } catch (e, stack) {
+      AppLogger.error(
+          'Unexpected biometric check error', 'SecurityService', e, stack);
       return false;
     }
   }
@@ -175,9 +180,13 @@ class SecurityService {
         biometricOnly: true,
         persistAcrossBackgrounding: true,
       );
-    } on PlatformException {
+    } on PlatformException catch (e, stack) {
+      AppLogger.warn(
+          'Biometric auth platform error: ${e.code} - ${e.message}', 'SecurityService', e, stack);
       return false;
-    } catch (_) {
+    } catch (e, stack) {
+      AppLogger.error(
+          'Unexpected biometric auth error', 'SecurityService', e, stack);
       return false;
     }
   }

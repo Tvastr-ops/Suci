@@ -260,6 +260,8 @@ class ProgressStepperWidget extends StatelessWidget {
     switch (unit) {
       case ProgressUnit.chapter:
         return totalProgress != null ? 'of $totalProgress Chapters' : 'Chapters';
+      case ProgressUnit.volume:
+        return totalProgress != null ? 'of $totalProgress Volumes' : 'Volumes';
       case ProgressUnit.volumeChapter:
         return totalProgress != null ? 'of $totalProgress Chapters' : 'Chapters';
       case ProgressUnit.words:

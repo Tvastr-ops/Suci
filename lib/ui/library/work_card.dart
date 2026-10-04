@@ -4,16 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../data/repositories/work_repository.dart';
 import '../../domain/enums/progress_unit.dart';
-import '../../domain/enums/publication_status.dart';
 import '../../domain/enums/reading_status.dart';
-import '../../domain/enums/work_format.dart';
+import '../../domain/models/work_item.dart';
 import '../../providers/database_provider.dart';
 import '../shared/cover_fallback.dart';
 
 class WorkCard extends ConsumerWidget {
-  final WorkWithTags item;
+  final WorkItem item;
 
   const WorkCard({
     super.key,
@@ -24,13 +22,12 @@ class WorkCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final work = item.work;
+    final work = item;
 
-    final formatLabel = WorkFormat.fromValue(work.format).label;
-    final pubStatusLabel =
-        PublicationStatus.fromValue(work.publicationStatus).label;
-    final progressString = _formatProgress(work);
-    final progressPercent = _calculatePercentage(work);
+    final formatLabel = work.workFormat.label;
+    final pubStatusLabel = work.pubStatus.label;
+    final progressString = work.formattedProgress;
+    final progressPercent = work.progressPercent;
 
     final metaParts = <String>[];
     if (formatLabel.isNotEmpty) metaParts.add(formatLabel);
@@ -185,9 +182,7 @@ class WorkCard extends ConsumerWidget {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (work.status == ReadingStatus.completed.value ||
-                      (work.totalProgress != null &&
-                          work.currentProgress >= work.totalProgress!))
+                  if (work.isCompleted)
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 6),
@@ -262,55 +257,6 @@ class WorkCard extends ConsumerWidget {
   }
 
 
-  String _formatProgress(dynamic work) {
-    final unit = ProgressUnit.fromValue(work.progressUnit);
-    final current = work.currentProgress as int;
-    final total = work.totalProgress as int?;
-    final volume = work.currentVolume as int?;
-
-    switch (unit) {
-      case ProgressUnit.chapter:
-        if (total != null) {
-          return 'Ch. $current / $total';
-        }
-        return 'Ch. $current';
-
-      case ProgressUnit.volumeChapter:
-        final volStr = volume != null ? 'Vol. $volume, ' : '';
-        if (total != null) {
-          return '${volStr}Ch. $current / $total';
-        }
-        return '${volStr}Ch. $current';
-
-      case ProgressUnit.words:
-        final formatter = NumberFormat('#,###');
-        final currentStr = formatter.format(current);
-        if (total != null) {
-          return '$currentStr / ${formatter.format(total)} words';
-        }
-        return '$currentStr words';
-
-      case ProgressUnit.percent:
-        return '$current%';
-    }
-  }
-
-  double? _calculatePercentage(dynamic work) {
-    final unit = ProgressUnit.fromValue(work.progressUnit);
-    final current = work.currentProgress as int;
-    final total = work.totalProgress as int?;
-
-    if (unit == ProgressUnit.percent) {
-      return (current / 100.0).clamp(0.0, 1.0);
-    }
-
-    if (total != null && total > 0) {
-      return (current / total).clamp(0.0, 1.0);
-    }
-
-    return null;
-  }
-
   Future<void> _openUrl(BuildContext context, String url) async {
     final uri = Uri.tryParse(url);
     if (uri != null) {
@@ -327,7 +273,7 @@ class WorkCard extends ConsumerWidget {
   }
 
   void _showQuickActionsSheet(BuildContext context, WidgetRef ref) {
-    final work = item.work;
+    final work = item;
     showModalBottomSheet(
       context: context,
       useRootNavigator: true,
@@ -372,7 +318,7 @@ class WorkCard extends ConsumerWidget {
   }
 
   void _showStatusPicker(BuildContext context, WidgetRef ref) {
-    final work = item.work;
+    final work = item;
     showModalBottomSheet(
       context: context,
       useRootNavigator: true,
@@ -384,8 +330,8 @@ class WorkCard extends ConsumerWidget {
             children: ReadingStatus.values.map((s) {
               return ListTile(
                 title: Text(s.label),
-                selected: work.status == s.value,
-                trailing: work.status == s.value
+                selected: work.readStatus == s,
+                trailing: work.readStatus == s
                     ? const Icon(Icons.check_rounded)
                     : null,
                 onTap: () {
@@ -394,7 +340,9 @@ class WorkCard extends ConsumerWidget {
                         title: work.title,
                         author: work.author,
                         sourceUrl: work.sourceUrl,
-                        additionalUrlsJson: work.additionalUrls,
+                        additionalUrlsJson: work.additionalUrls.isNotEmpty
+                            ? '[${work.additionalUrls.map((u) => '"$u"').join(',')}]'
+                            : '[]',
                         format: work.format,
                         status: s.value,
                         publicationStatus: work.publicationStatus,
@@ -419,7 +367,7 @@ class WorkCard extends ConsumerWidget {
   }
 
   void _confirmDelete(BuildContext context, WidgetRef ref) {
-    final work = item.work;
+    final work = item;
     showDialog(
       context: context,
       builder: (ctx) {
@@ -448,14 +396,17 @@ class WorkCard extends ConsumerWidget {
   }
 
   void _showQuickIncrementSheet(BuildContext context, WidgetRef ref) {
-    final work = item.work;
-    final unit = ProgressUnit.fromValue(work.progressUnit);
+    final work = item;
+    final unit = work.unit;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final controller = TextEditingController();
 
     final List<int> increments;
     switch (unit) {
+      case ProgressUnit.volume:
+        increments = [1, 2, 3, 5];
+        break;
       case ProgressUnit.chapter:
       case ProgressUnit.volumeChapter:
         increments = [2, 5, 10, 25];
@@ -493,7 +444,7 @@ class WorkCard extends ConsumerWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                '${work.title} • Current: ${_formatProgress(work)}',
+                '${work.title} • Current: ${work.formattedProgress}',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),

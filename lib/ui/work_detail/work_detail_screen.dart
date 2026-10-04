@@ -1,20 +1,17 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../data/database/app_database.dart';
-import '../../data/repositories/progress_log_repository.dart';
 import '../../domain/enums/progress_unit.dart';
-import '../../domain/enums/publication_status.dart';
 import '../../domain/enums/reading_status.dart';
-import '../../domain/enums/work_format.dart';
-import '../../providers/database_provider.dart';
+import '../../domain/models/progress_log_entry.dart';
+import '../../domain/models/work_item.dart';
 import '../shared/cover_fallback.dart';
 import '../shared/star_rating.dart';
 import 'progress_stepper.dart';
+import 'work_detail_view_model.dart';
 
 class WorkDetailScreen extends ConsumerStatefulWidget {
   final String workId;
@@ -45,11 +42,10 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final repo = ref.watch(workRepositoryProvider);
-    final logRepo = ref.watch(progressLogRepositoryProvider);
+    final viewModel = ref.watch(workDetailViewModelProvider(widget.workId));
 
-    return StreamBuilder(
-      stream: repo.watchWorkWithTags(widget.workId),
+    return StreamBuilder<WorkItem?>(
+      stream: viewModel.watchWork(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -57,28 +53,20 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
           );
         }
 
-        final item = snapshot.data;
-        if (item == null) {
+        final work = snapshot.data;
+        if (work == null) {
           return Scaffold(
             appBar: AppBar(),
             body: const Center(child: Text('Work not found')),
           );
         }
 
-        final work = item.work;
-        final tags = item.tags;
-        final format = WorkFormat.fromValue(work.format);
-        final pubStatus = PublicationStatus.fromValue(work.publicationStatus);
-        final readingStatus = ReadingStatus.fromValue(work.status);
-        final progressUnit = ProgressUnit.fromValue(work.progressUnit);
-
-        List<String> additionalUrls = [];
-        try {
-          final decoded = jsonDecode(work.additionalUrls);
-          if (decoded is List) {
-            additionalUrls = decoded.cast<String>();
-          }
-        } catch (_) {}
+        final tags = work.tags;
+        final format = work.workFormat;
+        final pubStatus = work.pubStatus;
+        final readingStatus = work.readStatus;
+        final progressUnit = work.unit;
+        final additionalUrls = work.additionalUrls;
 
         return Scaffold(
           appBar: AppBar(
@@ -91,7 +79,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
               PopupMenuButton<String>(
                 onSelected: (val) {
                   if (val == 'delete') {
-                    _confirmDelete(context, work.id, work.title);
+                    _confirmDelete(context, viewModel, work.title);
                   }
                 },
                 itemBuilder: (ctx) => [
@@ -180,25 +168,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                           size: 22,
                           showNumber: true,
                           onRatingChanged: (newRating) {
-                            repo.updateWork(
-                              id: work.id,
-                              title: work.title,
-                              author: work.author,
-                              sourceUrl: work.sourceUrl,
-                              additionalUrlsJson: work.additionalUrls,
-                              format: work.format,
-                              status: work.status,
-                              publicationStatus: work.publicationStatus,
-                              coverPath: work.coverPath,
-                              progressUnit: work.progressUnit,
-                              currentProgress: work.currentProgress,
-                              totalProgress: work.totalProgress,
-                              currentVolume: work.currentVolume,
-                              totalVolumes: work.totalVolumes,
-                              rating: newRating,
-                              notes: work.notes,
-                              synopsis: work.synopsis,
-                            );
+                            viewModel.updateRating(work, newRating);
                           },
                         ),
                       ],
@@ -249,7 +219,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                   ),
                   InkWell(
                     borderRadius: BorderRadius.circular(20),
-                    onTap: () => _showStatusPicker(context, work),
+                    onTap: () => _showStatusPicker(context, viewModel, work),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 8),
@@ -292,38 +262,28 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                 totalProgress: work.totalProgress,
                 currentVolume: work.currentVolume,
                 totalVolumes: work.totalVolumes,
-                onIncrement: () => repo.incrementProgress(work.id),
-                onDecrement: () => repo.decrementProgress(work.id),
+                onIncrement: () => viewModel.increment(),
+                onDecrement: () => viewModel.decrement(),
                 onDirectProgressSet: (val) {
-                  repo.updateProgressDirect(
-                    workId: work.id,
-                    progressValue: val,
-                  );
+                  viewModel.setProgressDirect(val);
                 },
                 onDirectVolumeSet: (vol) {
-                  repo.updateProgressDirect(
-                    workId: work.id,
-                    progressValue: work.currentProgress,
+                  viewModel.setProgressDirect(
+                    work.currentProgress,
                     volumeValue: vol,
                   );
                 },
                 onDirectTotalSet: (total) {
-                  repo.updateTotalProgress(
-                    workId: work.id,
-                    totalProgress: total,
-                  );
+                  viewModel.setTotalProgress(total);
                 },
                 onDirectTotalVolumesSet: (totalVols) {
-                  repo.updateTotalVolumes(
-                    workId: work.id,
-                    totalVolumes: totalVols,
-                  );
+                  viewModel.setTotalVolumes(totalVols);
                 },
               ),
               const SizedBox(height: 16),
 
               // Reading Dates Info
-              _buildDatesRow(context, work),
+              _buildDatesRow(context, viewModel, work),
               const SizedBox(height: 16),
 
               // Tags
@@ -340,7 +300,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                   runSpacing: 6,
                   children: tags.map((t) {
                     return Chip(
-                      label: Text('#${t.name}'),
+                      label: Text('#$t'),
                       visualDensity: VisualDensity.compact,
                     );
                   }).toList(),
@@ -384,30 +344,17 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                         ? Icons.check_rounded
                         : Icons.edit_note_rounded),
                     label: Text(_isEditingNotes ? 'Save' : 'Edit'),
-                    onPressed: () {
+                    onPressed: () async {
                       if (_isEditingNotes) {
-                        repo.updateWork(
-                          id: work.id,
-                          title: work.title,
-                          author: work.author,
-                          sourceUrl: work.sourceUrl,
-                          additionalUrlsJson: work.additionalUrls,
-                          format: work.format,
-                          status: work.status,
-                          publicationStatus: work.publicationStatus,
-                          coverPath: work.coverPath,
-                          progressUnit: work.progressUnit,
-                          currentProgress: work.currentProgress,
-                          totalProgress: work.totalProgress,
-                          currentVolume: work.currentVolume,
-                          totalVolumes: work.totalVolumes,
-                          rating: work.rating,
-                          notes: _notesController.text.trim(),
-                          synopsis: work.synopsis,
+                        await viewModel.saveNotes(
+                          work,
+                          _notesController.text,
                         );
-                        setState(() {
-                          _isEditingNotes = false;
-                        });
+                        if (context.mounted) {
+                          setState(() {
+                            _isEditingNotes = false;
+                          });
+                        }
                       } else {
                         _notesController.text = work.notes ?? '';
                         setState(() {
@@ -458,8 +405,8 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              StreamBuilder(
-                stream: logRepo.watchLogsForWork(work.id),
+              StreamBuilder<List<ProgressLogEntry>>(
+                stream: viewModel.watchLogs(),
                 builder: (context, logSnapshot) {
                   final logs = logSnapshot.data ?? [];
                   if (logs.isEmpty) {
@@ -482,9 +429,14 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                       final log = displayLogs[index];
                       final dateStr = DateFormat('MMM d, y • h:mm a')
                           .format(log.recordedAt);
-                      final unitLabel =
-                          ProgressUnit.fromValue(log.progressUnit).label;
                       final isLast = index == displayLogs.length - 1;
+
+                      final prevIndex = index + 1;
+                      final prevLog = (prevIndex < logs.length &&
+                              logs[prevIndex].progressUnit == log.progressUnit)
+                          ? logs[prevIndex]
+                          : null;
+                      final progressDisplay = _formatLogProgress(log, prevLog);
 
                       return IntrinsicHeight(
                         child: Row(
@@ -517,7 +469,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                                 padding: EdgeInsets.only(bottom: isLast ? 0 : 16),
                                 child: InkWell(
                                   borderRadius: BorderRadius.circular(8),
-                                  onTap: () => _showLogOptions(context, log),
+                                  onTap: () => _showLogOptions(context, viewModel, log),
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 6, vertical: 4),
@@ -528,13 +480,15 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                                         Row(
                                           children: [
                                             Text(
-                                              '$unitLabel ${log.progressValue}',
+                                              progressDisplay,
                                               style: theme.textTheme.labelMedium
                                                   ?.copyWith(
                                                 fontWeight: FontWeight.w600,
                                               ),
                                             ),
-                                            if (log.volumeValue != null) ...[
+                                            if (log.volumeValue != null &&
+                                                log.progressUnit !=
+                                                    ProgressUnit.volume.value) ...[
                                               const SizedBox(width: 4),
                                               Text(
                                                 '(Vol ${log.volumeValue})',
@@ -601,8 +555,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     );
   }
 
-  void _showStatusPicker(BuildContext context, dynamic work) {
-    final repo = ref.read(workRepositoryProvider);
+  void _showStatusPicker(BuildContext context, WorkDetailViewModel viewModel, WorkItem work) {
     showModalBottomSheet(
       context: context,
       useRootNavigator: true,
@@ -612,31 +565,13 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: ReadingStatus.values.map((s) {
-              final isSelected = work.status == s.value;
+              final isSelected = work.readStatus == s;
               return ListTile(
                 title: Text(s.label),
                 selected: isSelected,
                 trailing: isSelected ? const Icon(Icons.check_rounded) : null,
                 onTap: () {
-                  repo.updateWork(
-                    id: work.id,
-                    title: work.title,
-                    author: work.author,
-                    sourceUrl: work.sourceUrl,
-                    additionalUrlsJson: work.additionalUrls,
-                    format: work.format,
-                    status: s.value,
-                    publicationStatus: work.publicationStatus,
-                    coverPath: work.coverPath,
-                    progressUnit: work.progressUnit,
-                    currentProgress: work.currentProgress,
-                    totalProgress: work.totalProgress,
-                    currentVolume: work.currentVolume,
-                    totalVolumes: work.totalVolumes,
-                    rating: work.rating,
-                    notes: work.notes,
-                    synopsis: work.synopsis,
-                  );
+                  viewModel.updateStatus(work, s.value);
                   Navigator.pop(ctx);
                 },
               );
@@ -672,14 +607,50 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     );
   }
 
-  Widget _buildDatesRow(BuildContext context, dynamic work) {
+  String _formatLogProgress(ProgressLogEntry log, ProgressLogEntry? prevLog) {
+    final unit = ProgressUnit.fromValue(log.progressUnit);
+    final unitPrefix = unit == ProgressUnit.volume
+        ? 'Vol.'
+        : (unit.label.startsWith('Ch') || unit == ProgressUnit.volumeChapter)
+            ? 'Ch.'
+            : unit.label.startsWith('Pg')
+                ? 'Pg.'
+                : unit.label;
+
+    final current = log.progressValue;
+    final prev = prevLog?.progressValue;
+
+    if (prev != null && prev != current) {
+      final delta = current - prev;
+      final deltaSign = delta > 0 ? '+$delta' : '$delta';
+      if (unit == ProgressUnit.percent) {
+        return '$prev% → $current% ($deltaSign%)';
+      } else if (unit == ProgressUnit.words) {
+        final formatter = NumberFormat('#,###');
+        return '${formatter.format(prev)} → ${formatter.format(current)} words ($deltaSign)';
+      } else {
+        return '$unitPrefix $prev → $current ($deltaSign)';
+      }
+    }
+
+    if (unit == ProgressUnit.percent) {
+      return '$current%';
+    } else if (unit == ProgressUnit.words) {
+      final formatter = NumberFormat('#,###');
+      return '${formatter.format(current)} words';
+    } else {
+      return '$unitPrefix $current';
+    }
+  }
+
+  Widget _buildDatesRow(BuildContext context, WorkDetailViewModel viewModel, WorkItem work) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final dateFormat = DateFormat('MMM d, y');
 
-    final startedAt = work.startedAt as DateTime?;
-    final completedAt = work.completedAt as DateTime?;
-    final lastReadAt = work.lastReadAt as DateTime?;
+    final startedAt = work.startedAt;
+    final completedAt = work.completedAt;
+    final lastReadAt = work.lastReadAt;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -698,7 +669,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
             'Started',
             startedAt != null ? dateFormat.format(startedAt) : 'Set start date',
             hasValue: startedAt != null,
-            onTap: () => _editDate(context, work, isStarted: true),
+            onTap: () => _editDate(context, viewModel, work, isStarted: true),
           ),
           if (lastReadAt != null)
             _buildDateItem(
@@ -712,7 +683,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
             'Completed',
             completedAt != null ? dateFormat.format(completedAt) : 'Set completed',
             hasValue: completedAt != null,
-            onTap: () => _editDate(context, work, isStarted: false),
+            onTap: () => _editDate(context, viewModel, work, isStarted: false),
           ),
         ],
       ),
@@ -767,11 +738,13 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     return content;
   }
 
-  Future<void> _editDate(BuildContext context, dynamic work,
-      {required bool isStarted}) async {
-    final currentDate = isStarted
-        ? (work.startedAt as DateTime?)
-        : (work.completedAt as DateTime?);
+  Future<void> _editDate(
+    BuildContext context,
+    WorkDetailViewModel viewModel,
+    WorkItem work, {
+    required bool isStarted,
+  }) async {
+    final currentDate = isStarted ? work.startedAt : work.completedAt;
 
     if (currentDate != null) {
       final action = await showModalBottomSheet<String>(
@@ -800,29 +773,11 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
       );
 
       if (action == 'clear') {
-        await ref.read(workRepositoryProvider).updateWork(
-              id: work.id,
-              title: work.title,
-              author: work.author,
-              sourceUrl: work.sourceUrl,
-              additionalUrlsJson: work.additionalUrls,
-              format: work.format,
-              status: work.status,
-              publicationStatus: work.publicationStatus,
-              coverPath: work.coverPath,
-              progressUnit: work.progressUnit,
-              currentProgress: work.currentProgress,
-              totalProgress: work.totalProgress,
-              currentVolume: work.currentVolume,
-              totalVolumes: work.totalVolumes,
-              rating: work.rating,
-              notes: work.notes,
-              synopsis: work.synopsis,
-              startedAt: isStarted ? null : work.startedAt,
-              completedAt: !isStarted ? null : work.completedAt,
-              clearStartedAt: isStarted,
-              clearCompletedAt: !isStarted,
-            );
+        await viewModel.updateDates(
+          work,
+          clearStartedAt: isStarted,
+          clearCompletedAt: !isStarted,
+        );
         return;
       } else if (action != 'change') {
         return;
@@ -840,30 +795,13 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     );
 
     if (picked != null) {
-      await ref.read(workRepositoryProvider).updateWork(
-            id: work.id,
-            title: work.title,
-            author: work.author,
-            sourceUrl: work.sourceUrl,
-            additionalUrlsJson: work.additionalUrls,
-            format: work.format,
-            status: work.status,
-            publicationStatus: work.publicationStatus,
-            coverPath: work.coverPath,
-            progressUnit: work.progressUnit,
-            currentProgress: work.currentProgress,
-            totalProgress: work.totalProgress,
-            currentVolume: work.currentVolume,
-            totalVolumes: work.totalVolumes,
-            rating: work.rating,
-            notes: work.notes,
-            synopsis: work.synopsis,
-            startedAt: isStarted ? picked : work.startedAt,
-            completedAt: !isStarted ? picked : work.completedAt,
-          );
+      await viewModel.updateDates(
+        work,
+        startedAt: isStarted ? picked : null,
+        completedAt: !isStarted ? picked : null,
+      );
     }
   }
-
 
   Future<void> _openUrl(BuildContext context, String url) async {
     final uri = Uri.tryParse(url);
@@ -880,7 +818,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     }
   }
 
-  void _confirmDelete(BuildContext context, String workId, String title) {
+  void _confirmDelete(BuildContext context, WorkDetailViewModel viewModel, String title) {
     showDialog(
       context: context,
       builder: (ctx) {
@@ -896,10 +834,10 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
               style: FilledButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.error,
               ),
-              onPressed: () {
-                ref.read(workRepositoryProvider).deleteWork(workId);
-                Navigator.pop(ctx);
-                context.pop();
+              onPressed: () async {
+                await viewModel.deleteWork();
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (context.mounted) context.pop();
               },
               child: const Text('Delete'),
             ),
@@ -909,9 +847,8 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     );
   }
 
-  void _showLogOptions(BuildContext context, ProgressLog log) {
+  void _showLogOptions(BuildContext context, WorkDetailViewModel viewModel, ProgressLogEntry log) {
     final colorScheme = Theme.of(context).colorScheme;
-    final logRepo = ref.read(progressLogRepositoryProvider);
 
     showModalBottomSheet(
       context: context,
@@ -930,7 +867,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                 ),
                 onTap: () {
                   Navigator.pop(ctx);
-                  _showEditLogDialog(context, log, logRepo);
+                  _showEditLogDialog(context, viewModel, log);
                 },
               ),
               ListTile(
@@ -947,7 +884,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                 ),
                 onTap: () {
                   Navigator.pop(ctx);
-                  _confirmDeleteLog(context, log, logRepo);
+                  _confirmDeleteLog(context, viewModel, log);
                 },
               ),
             ],
@@ -959,8 +896,8 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
 
   void _showEditLogDialog(
     BuildContext context,
-    ProgressLog log,
-    ProgressLogRepository logRepo,
+    WorkDetailViewModel viewModel,
+    ProgressLogEntry log,
   ) {
     final progressController =
         TextEditingController(text: log.progressValue.toString());
@@ -1022,8 +959,8 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                 final newVolume = int.tryParse(volumeController.text.trim());
                 final newNote = noteController.text.trim();
 
-                await logRepo.updateLog(
-                  id: log.id,
+                await viewModel.updateLog(
+                  logId: log.id,
                   progressValue: newProgress,
                   volumeValue: newVolume,
                   note: newNote.isEmpty ? null : newNote,
@@ -1040,8 +977,8 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
 
   void _confirmDeleteLog(
     BuildContext context,
-    ProgressLog log,
-    ProgressLogRepository logRepo,
+    WorkDetailViewModel viewModel,
+    ProgressLogEntry log,
   ) {
     showDialog(
       context: context,
@@ -1060,7 +997,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                 backgroundColor: Theme.of(context).colorScheme.error,
               ),
               onPressed: () async {
-                await logRepo.deleteLog(log.id);
+                await viewModel.deleteLog(log.id);
                 if (ctx.mounted) {
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(

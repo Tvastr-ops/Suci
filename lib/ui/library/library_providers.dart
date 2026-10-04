@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/repositories/work_repository.dart';
 import '../../domain/enums/reading_status.dart';
+import '../../domain/models/work_item.dart';
 import '../../providers/database_provider.dart';
 
 class LibraryFilterState {
@@ -78,11 +78,11 @@ final libraryFilterProvider =
     NotifierProvider<LibraryFilterNotifier, LibraryFilterState>(
         LibraryFilterNotifier.new);
 
-final libraryWorksStreamProvider = StreamProvider<List<WorkWithTags>>((ref) {
+final libraryWorksStreamProvider = StreamProvider<List<WorkItem>>((ref) {
   final filter = ref.watch(libraryFilterProvider);
   final repo = ref.watch(workRepositoryProvider);
 
-  return repo.watchWorksWithTags(
+  return repo.watchWorkItems(
     status: filter.status,
     searchQuery: filter.searchQuery,
     format: filter.format,

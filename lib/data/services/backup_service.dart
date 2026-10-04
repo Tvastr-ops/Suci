@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import '../database/app_database.dart';
 import '../repositories/tag_repository.dart';
+import '../../core/logging/app_logger.dart';
 import 'import_resolver.dart';
 
 class ImportPreview {
@@ -53,7 +54,9 @@ class BackupService {
         if (decoded is List) {
           additionalUrls = decoded.cast<String>();
         }
-      } catch (_) {}
+      } catch (e, stack) {
+        AppLogger.debug('Failed to decode additionalUrls for work ${work.id}', 'BackupService', e, stack);
+      }
 
       worksList.add({
         'id': work.id,
@@ -185,8 +188,16 @@ class BackupService {
   }
 
   ImportPreview parseAndValidateJson(String jsonString) {
-    final dynamic decoded = jsonDecode(jsonString);
+    final dynamic decoded;
+    try {
+      decoded = jsonDecode(jsonString);
+    } catch (e, stack) {
+      AppLogger.error('Failed to parse backup JSON', 'BackupService', e, stack);
+      throw const FormatException('Invalid JSON format in backup file');
+    }
+
     if (decoded is! Map<String, dynamic>) {
+      AppLogger.warn('Backup JSON root is not an object', 'BackupService');
       throw const FormatException('Invalid backup: Expected a JSON object root');
     }
 
@@ -206,10 +217,15 @@ class BackupService {
 
   Future<void> importBackup(Map<String, dynamic> data,
       {required bool overwrite}) async {
-    if (overwrite) {
-      await _resolver.executeOverwrite(data);
-    } else {
-      await _resolver.executeMerge(data);
+    try {
+      if (overwrite) {
+        await _resolver.executeOverwrite(data);
+      } else {
+        await _resolver.executeMerge(data);
+      }
+    } catch (e, stack) {
+      AppLogger.error('Import backup execution failed', 'BackupService', e, stack);
+      rethrow;
     }
   }
 }

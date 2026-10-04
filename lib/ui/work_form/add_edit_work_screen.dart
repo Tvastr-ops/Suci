@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,9 +8,9 @@ import '../../domain/enums/progress_unit.dart';
 import '../../domain/enums/publication_status.dart';
 import '../../domain/enums/reading_status.dart';
 import '../../domain/enums/work_format.dart';
-import '../../providers/database_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../shared/star_rating.dart';
+import 'add_edit_work_view_model.dart';
 import 'tag_input_field.dart';
 
 class AddEditWorkScreen extends ConsumerStatefulWidget {
@@ -70,38 +68,30 @@ class _AddEditWorkScreenState extends ConsumerState<AddEditWorkScreen> {
 
   Future<void> _loadExistingOrDefaults() async {
     if (widget.workId != null) {
-      final workData = await ref
-          .read(workRepositoryProvider)
-          .getWorkWithTags(widget.workId!);
+      final vm = ref.read(addEditWorkViewModelProvider);
+      final work = await vm.loadWork(widget.workId!);
 
-      if (workData != null) {
-        final w = workData.work;
-        _titleController.text = w.title;
-        _authorController.text = w.author ?? '';
-        _sourceUrlController.text = w.sourceUrl ?? '';
-        _coverPathController.text = w.coverPath ?? '';
-        _synopsisController.text = w.synopsis ?? '';
-        _notesController.text = w.notes ?? '';
-        _currentProgressController.text = w.currentProgress.toString();
-        _totalProgressController.text = w.totalProgress?.toString() ?? '';
-        _currentVolumeController.text = w.currentVolume?.toString() ?? '';
-        _totalVolumesController.text = w.totalVolumes?.toString() ?? '';
+      if (work != null) {
+        _titleController.text = work.title;
+        _authorController.text = work.author ?? '';
+        _sourceUrlController.text = work.sourceUrl ?? '';
+        _coverPathController.text = work.coverPath ?? '';
+        _synopsisController.text = work.synopsis ?? '';
+        _notesController.text = work.notes ?? '';
+        _currentProgressController.text = work.currentProgress.toString();
+        _totalProgressController.text = work.totalProgress?.toString() ?? '';
+        _currentVolumeController.text = work.currentVolume?.toString() ?? '';
+        _totalVolumesController.text = work.totalVolumes?.toString() ?? '';
 
-        _status = ReadingStatus.fromValue(w.status);
-        _pubStatus = PublicationStatus.fromValue(w.publicationStatus);
-        _format = WorkFormat.fromValue(w.format);
-        _progressUnit = ProgressUnit.fromValue(w.progressUnit);
-        _rating = w.rating;
-        _startedDate = w.startedAt;
-        _completedDate = w.completedAt;
-        _tags = workData.tags.map((t) => t.name).toList();
-
-        try {
-          final decoded = jsonDecode(w.additionalUrls);
-          if (decoded is List) {
-            _additionalUrls = decoded.cast<String>();
-          }
-        } catch (_) {}
+        _status = work.readStatus;
+        _pubStatus = work.pubStatus;
+        _format = work.workFormat;
+        _progressUnit = work.unit;
+        _rating = work.rating;
+        _startedDate = work.startedAt;
+        _completedDate = work.completedAt;
+        _tags = List.from(work.tags);
+        _additionalUrls = List.from(work.additionalUrls);
 
         _isMoreExpanded = true; // Expand when editing existing work
       }
@@ -111,9 +101,11 @@ class _AddEditWorkScreenState extends ConsumerState<AddEditWorkScreen> {
       _startedDate = DateTime.now();
     }
 
-    setState(() {
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -132,31 +124,16 @@ class _AddEditWorkScreenState extends ConsumerState<AddEditWorkScreen> {
   }
 
   void _detectDomainAndSuggest(String url) {
-    final lower = url.toLowerCase();
-    if (lower.contains('royalroad.com')) {
+    final suggestion = ref.read(addEditWorkViewModelProvider).detectDomain(url);
+    if (suggestion.suggestedFormat != null || suggestion.suggestedTag != null) {
       setState(() {
-        _format = WorkFormat.webNovel;
-        if (!_tags.contains('Royal Road')) _tags.add('Royal Road');
-      });
-    } else if (lower.contains('archiveofourown.org')) {
-      setState(() {
-        _format = WorkFormat.fanfiction;
-        if (!_tags.contains('AO3')) _tags.add('AO3');
-      });
-    } else if (lower.contains('scribblehub.com')) {
-      setState(() {
-        _format = WorkFormat.webNovel;
-        if (!_tags.contains('Scribble Hub')) _tags.add('Scribble Hub');
-      });
-    } else if (lower.contains('fanfiction.net')) {
-      setState(() {
-        _format = WorkFormat.fanfiction;
-        if (!_tags.contains('FFN')) _tags.add('FFN');
-      });
-    } else if (lower.contains('spacebattles.com')) {
-      setState(() {
-        _format = WorkFormat.webSerial;
-        if (!_tags.contains('Spacebattles')) _tags.add('Spacebattles');
+        if (suggestion.suggestedFormat != null) {
+          _format = suggestion.suggestedFormat!;
+        }
+        if (suggestion.suggestedTag != null &&
+            !_tags.contains(suggestion.suggestedTag)) {
+          _tags.add(suggestion.suggestedTag!);
+        }
       });
     }
   }
@@ -194,63 +171,50 @@ class _AddEditWorkScreenState extends ConsumerState<AddEditWorkScreen> {
     final currentProgress =
         int.tryParse(_currentProgressController.text.trim()) ?? 0;
     final totalProgress = int.tryParse(_totalProgressController.text.trim());
-    final currentVolume = int.tryParse(_currentVolumeController.text.trim());
-    final totalVolumes = int.tryParse(_totalVolumesController.text.trim());
+    final currentVolume = _progressUnit == ProgressUnit.volumeChapter
+        ? int.tryParse(_currentVolumeController.text.trim())
+        : null;
+    final totalVolumes = _progressUnit == ProgressUnit.volumeChapter
+        ? int.tryParse(_totalVolumesController.text.trim())
+        : null;
 
-    final repo = ref.read(workRepositoryProvider);
+    final vm = ref.read(addEditWorkViewModelProvider);
+    final result = await vm.saveWork(
+      id: widget.workId,
+      title: title,
+      author: author,
+      sourceUrl: sourceUrl,
+      additionalUrls: _additionalUrls,
+      format: _format,
+      status: _status,
+      publicationStatus: _pubStatus,
+      coverPath: coverPath,
+      progressUnit: _progressUnit,
+      currentProgress: currentProgress,
+      totalProgress: totalProgress,
+      currentVolume: currentVolume,
+      totalVolumes: totalVolumes,
+      rating: _rating,
+      synopsis: synopsis,
+      notes: notes,
+      tags: _tags,
+      startedAt: _startedDate,
+      completedAt: _completedDate,
+    );
 
-    if (widget.workId == null) {
-      await repo.createWork(
-        title: title,
-        author: author,
-        sourceUrl: sourceUrl,
-        additionalUrlsJson: jsonEncode(_additionalUrls),
-        format: _format.value,
-        status: _status.value,
-        publicationStatus: _pubStatus.value,
-        coverPath: coverPath,
-        progressUnit: _progressUnit.value,
-        currentProgress: currentProgress,
-        totalProgress: totalProgress,
-        currentVolume: currentVolume,
-        totalVolumes: totalVolumes,
-        rating: _rating,
-        synopsis: synopsis,
-        notes: notes,
-        tags: _tags,
-        startedAt: _startedDate,
-        completedAt: _completedDate,
-      );
-    } else {
-      await repo.updateWork(
-        id: widget.workId!,
-        title: title,
-        author: author,
-        sourceUrl: sourceUrl,
-        additionalUrlsJson: jsonEncode(_additionalUrls),
-        format: _format.value,
-        status: _status.value,
-        publicationStatus: _pubStatus.value,
-        coverPath: coverPath,
-        progressUnit: _progressUnit.value,
-        currentProgress: currentProgress,
-        totalProgress: totalProgress,
-        currentVolume: currentVolume,
-        totalVolumes: totalVolumes,
-        rating: _rating,
-        synopsis: synopsis,
-        notes: notes,
-        tags: _tags,
-        startedAt: _startedDate,
-        clearStartedAt: _startedDate == null,
-        completedAt: _completedDate,
-        clearCompletedAt: _completedDate == null,
-      );
-    }
+    if (!mounted) return;
 
-    if (mounted) {
-      context.pop();
-    }
+    result.fold(
+      onSuccess: (_) => context.pop(),
+      onFailure: (err, _) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save: $err'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -381,6 +345,31 @@ class _AddEditWorkScreenState extends ConsumerState<AddEditWorkScreen> {
                       onSelected: (selected) {
                         if (selected) {
                           setState(() {
+                            if (u == ProgressUnit.volume &&
+                                _progressUnit == ProgressUnit.volumeChapter) {
+                              if (_currentVolumeController.text.isNotEmpty &&
+                                  _currentVolumeController.text != '0') {
+                                _currentProgressController.text =
+                                    _currentVolumeController.text;
+                              }
+                              if (_totalVolumesController.text.isNotEmpty) {
+                                _totalProgressController.text =
+                                    _totalVolumesController.text;
+                              }
+                            } else if (u == ProgressUnit.volumeChapter &&
+                                _progressUnit == ProgressUnit.volume) {
+                              if (_currentProgressController.text.isNotEmpty &&
+                                  _currentProgressController.text != '0') {
+                                _currentVolumeController.text =
+                                    _currentProgressController.text;
+                                _currentProgressController.text = '0';
+                              }
+                              if (_totalProgressController.text.isNotEmpty) {
+                                _totalVolumesController.text =
+                                    _totalProgressController.text;
+                                _totalProgressController.text = '';
+                              }
+                            }
                             _progressUnit = u;
                           });
                         }
@@ -635,6 +624,29 @@ class _AddEditWorkScreenState extends ConsumerState<AddEditWorkScreen> {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
                   labelText: 'Total Chapters',
+                  hintText: 'Optional',
+                ),
+              ),
+            ),
+          ],
+        );
+
+      case ProgressUnit.volume:
+        return Row(
+          children: [
+            Expanded(
+              child: _buildStepperField(
+                controller: _currentProgressController,
+                label: 'Current Volume *',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: _totalProgressController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Total Volumes',
                   hintText: 'Optional',
                 ),
               ),

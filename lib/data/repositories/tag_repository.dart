@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
+import '../../domain/models/tag_item.dart';
 import '../database/app_database.dart';
 
 class TagRepository {
@@ -11,6 +12,17 @@ class TagRepository {
   Future<List<Tag>> getAllTags() {
     return (_db.select(_db.tags)..orderBy([(t) => OrderingTerm.asc(t.name)]))
         .get();
+  }
+
+  Future<List<TagItem>> getTagItems() async {
+    final tags = await getAllTags();
+    return tags.map(TagItem.fromDrift).toList();
+  }
+
+  Stream<List<TagItem>> watchTagItems() {
+    return (_db.select(_db.tags)..orderBy([(t) => OrderingTerm.asc(t.name)]))
+        .watch()
+        .map((tags) => tags.map(TagItem.fromDrift).toList());
   }
 
   Future<List<Tag>> searchTags(String query) {

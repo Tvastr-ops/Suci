@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import '../../domain/enums/progress_unit.dart';
 import '../../domain/enums/publication_status.dart';
 import '../../domain/enums/reading_status.dart';
+import '../../domain/models/work_item.dart';
 import '../database/app_database.dart';
 import 'progress_log_repository.dart';
 import 'tag_repository.dart';
@@ -15,6 +16,9 @@ class WorkWithTags {
     required this.work,
     required this.tags,
   });
+
+  WorkItem toDomain() =>
+      WorkItem.fromDrift(work, tags.map((t) => t.name).toList());
 
   WorkWithTags copyWith({
     Work? work,
@@ -156,6 +160,31 @@ class WorkRepository {
       }
       return WorkWithTags(work: work, tags: tags);
     });
+  }
+
+  Stream<List<WorkItem>> watchWorkItems({
+    ReadingStatus? status,
+    String? searchQuery,
+    String? format,
+    String? tagFilter,
+    String sortBy = 'last_read',
+  }) {
+    return watchWorksWithTags(
+      status: status,
+      searchQuery: searchQuery,
+      format: format,
+      tagFilter: tagFilter,
+      sortBy: sortBy,
+    ).map((list) => list.map((e) => e.toDomain()).toList());
+  }
+
+  Stream<WorkItem?> watchWorkItem(String id) {
+    return watchWorkWithTags(id).map((w) => w?.toDomain());
+  }
+
+  Future<WorkItem?> getWorkItem(String id) async {
+    final w = await getWorkWithTags(id);
+    return w?.toDomain();
   }
 
   Stream<Map<String, int>> watchStatusCounts() {
