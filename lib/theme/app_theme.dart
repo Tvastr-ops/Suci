@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppPalette {
@@ -75,12 +75,12 @@ class AppTheme {
   static const Color defaultSeedColor = Color(0xFF2C6E63);
 
   static TextTheme _buildTextTheme(ColorScheme scheme) {
-    final fontFamily = GoogleFonts.plusJakartaSans().fontFamily;
-    final pjs = Typography.material2021(platform: TargetPlatform.android).black.apply(
-      fontFamily: fontFamily,
+    final baseTextTheme = Typography.material2021(platform: TargetPlatform.android).black.apply(
       displayColor: scheme.onSurface,
       bodyColor: scheme.onSurface,
     );
+
+    final pjs = GoogleFonts.plusJakartaSansTextTheme(baseTextTheme);
 
     return pjs.copyWith(
       displayLarge: pjs.displayLarge?.copyWith(
