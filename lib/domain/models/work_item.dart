@@ -96,7 +96,7 @@ class WorkItem {
         ? 'Vol.'
         : unit.label.startsWith('Ch')
             ? 'Ch.'
-            : unit.label.startsWith('Pg')
+            : (unit == ProgressUnit.page || unit.label.startsWith('Pg'))
                 ? 'Pg.'
                 : unit.label;
 

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:suci/data/database/app_database.dart';
+import 'package:suci/domain/enums/progress_unit.dart';
 import 'package:suci/domain/enums/reading_status.dart';
 import 'package:suci/domain/models/progress_log_entry.dart';
 import 'package:suci/domain/models/tag_item.dart';
@@ -60,6 +61,23 @@ void main() {
         totalProgress: 20,
       );
       expect(volChWork.formattedProgress, 'Vol. 2, Ch. 15 / 20');
+
+      final pageWork = ongoingWork.copyWith(
+        progressUnit: 'page',
+        currentProgress: 120,
+        totalProgress: 350,
+      );
+      expect(pageWork.formattedProgress, 'Pg. 120 / 350');
+
+      final pageNoTotal = pageWork.copyWith(clearTotalProgress: true);
+      expect(pageNoTotal.formattedProgress, 'Pg. 120');
+      expect(pageNoTotal.unit, ProgressUnit.page);
+    });
+
+    test('ProgressUnit.fromValue maps page and pages correctly', () {
+      expect(ProgressUnit.fromValue('page'), ProgressUnit.page);
+      expect(ProgressUnit.fromValue('pages'), ProgressUnit.page);
+      expect(ProgressUnit.fromValue('Pg'), ProgressUnit.page);
     });
 
     test('fromDrift maps Drift Work and tags correctly', () {

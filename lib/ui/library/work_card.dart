@@ -158,13 +158,14 @@ class WorkCard extends ConsumerWidget {
                         child: TweenAnimationBuilder<double>(
                           duration: const Duration(milliseconds: 300),
                           curve: Curves.easeInOut,
-                          tween: Tween<double>(begin: 0, end: progressPercent),
+                          tween: Tween<double>(
+                              begin: progressPercent, end: progressPercent),
                           builder: (context, value, _) {
                             return LinearProgressIndicator(
                               value: value,
-                              minHeight: 3,
-                              backgroundColor: colorScheme.surfaceContainerHighest
-                                  .withValues(alpha: 0.4),
+                              minHeight: 3.5,
+                              backgroundColor: colorScheme.onSurface
+                                  .withValues(alpha: 0.12),
                               valueColor: AlwaysStoppedAnimation<Color>(
                                   colorScheme.primary),
                             );
@@ -410,6 +411,9 @@ class WorkCard extends ConsumerWidget {
       case ProgressUnit.chapter:
       case ProgressUnit.volumeChapter:
         increments = [2, 5, 10, 25];
+        break;
+      case ProgressUnit.page:
+        increments = [5, 10, 25, 50];
         break;
       case ProgressUnit.percent:
         increments = [5, 10, 25, 50];

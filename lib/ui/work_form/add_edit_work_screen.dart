@@ -631,6 +631,29 @@ class _AddEditWorkScreenState extends ConsumerState<AddEditWorkScreen> {
           ],
         );
 
+      case ProgressUnit.page:
+        return Row(
+          children: [
+            Expanded(
+              child: _buildStepperField(
+                controller: _currentProgressController,
+                label: 'Current Page *',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: _totalProgressController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Total Pages',
+                  hintText: 'Optional',
+                ),
+              ),
+            ),
+          ],
+        );
+
       case ProgressUnit.volume:
         return Row(
           children: [

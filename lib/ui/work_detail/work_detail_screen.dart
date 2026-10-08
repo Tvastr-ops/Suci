@@ -613,7 +613,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
         ? 'Vol.'
         : (unit.label.startsWith('Ch') || unit == ProgressUnit.volumeChapter)
             ? 'Ch.'
-            : unit.label.startsWith('Pg')
+            : (unit == ProgressUnit.page || unit.label.startsWith('Pg'))
                 ? 'Pg.'
                 : unit.label;
 

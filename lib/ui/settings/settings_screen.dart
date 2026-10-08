@@ -51,6 +51,8 @@ class SettingsScreen extends ConsumerWidget {
                   title: const Text('Theme Mode'),
                   trailing: DropdownButton<ThemeMode>(
                     value: settings.themeMode,
+                    alignment: AlignmentDirectional.centerEnd,
+                    isDense: true,
                     underline: const SizedBox(),
                     items: const [
                       DropdownMenuItem(
@@ -87,15 +89,15 @@ class SettingsScreen extends ConsumerWidget {
                 ListTile(
                   leading: const Icon(Icons.color_lens_outlined),
                   title: const Text('Theme Palette'),
-                  subtitle: Text(
-                    settings.dynamicColor
-                        ? 'Used when dynamic color is disabled'
-                        : AppPalettes.fromId(settings.customPalette).label,
-                  ),
+                  subtitle: settings.dynamicColor
+                      ? const Text('Active when dynamic color is disabled')
+                      : null,
                   trailing: DropdownButton<String>(
                     value: AppPalettes.all.any((p) => p.id == settings.customPalette)
                         ? settings.customPalette
                         : AppPalettes.all.first.id,
+                    alignment: AlignmentDirectional.centerEnd,
+                    isDense: true,
                     underline: const SizedBox(),
                     items: AppPalettes.all.map((p) {
                       return DropdownMenuItem(
@@ -104,8 +106,8 @@ class SettingsScreen extends ConsumerWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
-                              width: 14,
-                              height: 14,
+                              width: 12,
+                              height: 12,
                               decoration: BoxDecoration(
                                 color: p.primary,
                                 shape: BoxShape.circle,
@@ -128,9 +130,10 @@ class SettingsScreen extends ConsumerWidget {
                 ListTile(
                   leading: const Icon(Icons.format_list_numbered_rounded),
                   title: const Text('Default Progress Unit'),
-                  subtitle: Text(settings.defaultProgressUnit.label),
                   trailing: DropdownButton<ProgressUnit>(
                     value: settings.defaultProgressUnit,
+                    alignment: AlignmentDirectional.centerEnd,
+                    isDense: true,
                     underline: const SizedBox(),
                     items: ProgressUnit.values.map((u) {
                       return DropdownMenuItem(
@@ -176,6 +179,8 @@ class SettingsScreen extends ConsumerWidget {
                     leading: const Icon(Icons.pin_outlined),
                     title: const Text('Change PIN'),
                     subtitle: const Text('Update your 4-digit app PIN'),
+                    trailing:
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                     onTap: () => PinChangeDialog.show(context),
                   ),
                   if (authState.isBiometricAvailable) ...[
@@ -197,9 +202,10 @@ class SettingsScreen extends ConsumerWidget {
                   ListTile(
                     leading: const Icon(Icons.timer_outlined),
                     title: const Text('Auto-Lock Timeout'),
-                    subtitle: Text(_formatTimeout(authState.timeoutSeconds)),
                     trailing: DropdownButton<int>(
                       value: authState.timeoutSeconds,
+                      alignment: AlignmentDirectional.centerEnd,
+                      isDense: true,
                       underline: const SizedBox(),
                       items: const [
                         DropdownMenuItem(value: 0, child: Text('Immediately')),
@@ -224,7 +230,7 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 20),
 
           // Section: Backup & Portability
-          _buildSectionHeader(context, 'Backup & Portability (Local-First)'),
+          _buildSectionHeader(context, 'Backup & Portability'),
           Card(
             child: Column(
               children: [
@@ -243,6 +249,8 @@ class SettingsScreen extends ConsumerWidget {
                   title: const Text('Import / Restore Backup'),
                   subtitle: const Text(
                       'Restore from JSON backup with merge or overwrite'),
+                  trailing:
+                      const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                   onTap: () => _importBackup(context, backupService),
                 ),
               ],
@@ -279,7 +287,7 @@ class SettingsScreen extends ConsumerWidget {
             child: Column(
               children: [
                 Text(
-                  'Sūcī v1.1.2',
+                  'Sūcī v1.1.4',
                   style: theme.textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: colorScheme.onSurfaceVariant,
@@ -366,22 +374,6 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  String _formatTimeout(int seconds) {
-    switch (seconds) {
-      case 0:
-        return 'Immediately upon leaving';
-      case 30:
-        return 'After 30 seconds in background';
-      case 60:
-        return 'After 1 minute in background';
-      case 300:
-        return 'After 5 minutes in background';
-      case 900:
-        return 'After 15 minutes in background';
-      default:
-        return '$seconds seconds';
-    }
-  }
 
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
