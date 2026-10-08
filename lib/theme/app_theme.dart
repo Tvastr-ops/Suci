@@ -75,12 +75,12 @@ class AppTheme {
   static const Color defaultSeedColor = Color(0xFF2C6E63);
 
   static TextTheme _buildTextTheme(ColorScheme scheme) {
-    final baseTextTheme = Typography.material2021(platform: TargetPlatform.android).black.apply(
+    final fontFamily = GoogleFonts.plusJakartaSans().fontFamily;
+    final pjs = Typography.material2021(platform: TargetPlatform.android).black.apply(
+      fontFamily: fontFamily,
       displayColor: scheme.onSurface,
       bodyColor: scheme.onSurface,
     );
-
-    final pjs = GoogleFonts.plusJakartaSansTextTheme(baseTextTheme);
 
     return pjs.copyWith(
       displayLarge: pjs.displayLarge?.copyWith(
