@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/enums/work_format.dart';
 import '../shared/empty_state.dart';
 import 'filter_bottom_sheet.dart';
 import 'library_providers.dart';
+import 'reading_insights_sheet.dart';
 import 'status_chip_row.dart';
 import 'work_card.dart';
 
@@ -60,25 +62,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         .setSearchQuery(val.isEmpty ? null : val);
                   },
                 )
-              : Text.rich(
-                  TextSpan(
-                    text: 'Sūcī',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.7,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                    children: [
-                      TextSpan(
-                        text: '.',
-                        style: TextStyle(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ],
-                  ),
+              : _SpringWordmark(
                   key: const ValueKey('title_active'),
+                  onTap: () => showReadingInsightsSheet(context),
                 ),
         ),
         actions: [
@@ -287,6 +273,59 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         maxHeight: MediaQuery.sizeOf(context).height * 0.82,
       ),
       builder: (ctx) => const FilterBottomSheet(),
+    );
+  }
+}
+
+class _SpringWordmark extends StatefulWidget {
+  final VoidCallback onTap;
+
+  const _SpringWordmark({super.key, required this.onTap});
+
+  @override
+  State<_SpringWordmark> createState() => _SpringWordmarkState();
+}
+
+class _SpringWordmarkState extends State<_SpringWordmark> {
+  double _scale = 1.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => _scale = 0.94),
+      onTapUp: (_) {
+        setState(() => _scale = 1.0);
+        HapticFeedback.lightImpact();
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _scale = 1.0),
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 140),
+        curve: Curves.easeOutCubic,
+        child: Text.rich(
+          TextSpan(
+            text: 'Sūcī',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.7,
+              color: theme.colorScheme.onSurface,
+            ),
+            children: [
+              TextSpan(
+                text: '.',
+                style: TextStyle(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

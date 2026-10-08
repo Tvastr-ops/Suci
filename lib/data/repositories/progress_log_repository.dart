@@ -92,4 +92,10 @@ class ProgressLogRepository {
   Future<void> deleteLog(String id) {
     return (_db.delete(_db.progressLogs)..where((l) => l.id.equals(id))).go();
   }
+
+  Stream<List<ProgressLog>> watchAllLogs() {
+    return (_db.select(_db.progressLogs)
+          ..orderBy([(l) => OrderingTerm.desc(l.recordedAt)]))
+        .watch();
+  }
 }

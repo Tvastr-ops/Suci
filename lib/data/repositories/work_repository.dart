@@ -606,4 +606,8 @@ class WorkRepository {
       await _db.delete(_db.works).go();
     });
   }
+
+  Stream<List<Work>> watchAllWorks() {
+    return _db.select(_db.works).watch();
+  }
 }
